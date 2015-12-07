@@ -1,0 +1,172 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "S3 VirusScan",
+  "Parameters": {
+    "AutoScalingDesiredCapacityParameter": {
+      "Description": "Desired Capacity for Auto Scaling",
+      "Type": "Number",
+      "Default": "1"
+    },
+    "AutoScalingMaxSizeParameter": {
+      "Description": "Max Size for Auto Scaling",
+      "Type": "Number",
+      "Default": "1"
+    },
+    "VPCParameter": {
+      "Description": "VPC",
+      "Type": "AWS::EC2::VPC::Id"
+    },
+    "SubnetsParameter": {
+      "Description": "A list of subnet",
+      "Type": "List<AWS::EC2::Subnet::Id>"
+    },
+    "InstanceTypeParameter": {
+      "Description": "Specifies the instance type of the EC2 instance",
+      "Type": "String",
+      "Default": "t2.micro"
+    },
+    "KeyNameParameter": {
+      "Description": "Provides the name of the EC2 key pair",
+      "Type": "AWS::EC2::KeyPair::KeyName"
+    }
+  },
+  "Mappings": {
+    "EC2RegionMap": {
+      "ap-northeast-1": {"AmazonLinuxAMIHVMEBSBacked64bit": "ami-c7f90ec7"},
+      "ap-southeast-1": {"AmazonLinuxAMIHVMEBSBacked64bit": "ami-64d8e936"},
+      "ap-southeast-2": {"AmazonLinuxAMIHVMEBSBacked64bit": "ami-f39cecc9"},
+      "eu-central-1": {"AmazonLinuxAMIHVMEBSBacked64bit": "ami-ae221fb3"},
+      "eu-west-1": {"AmazonLinuxAMIHVMEBSBacked64bit": "ami-a30897d4"},
+      "sa-east-1": {"AmazonLinuxAMIHVMEBSBacked64bit": "ami-b72890aa"},
+      "us-east-1": {"AmazonLinuxAMIHVMEBSBacked64bit": "ami-10cae778"},
+      "us-west-1": {"AmazonLinuxAMIHVMEBSBacked64bit": "ami-cb14f28f"},
+      "us-west-2": {"AmazonLinuxAMIHVMEBSBacked64bit": "ami-e9527ed9"}
+    }
+  },
+  "Resources": {
+    "ScanQueue": {
+      "Type": "AWS::SQS::Queue",
+      "Properties": {
+      }
+    },
+    "ScanQueuePolicy": {
+      "Type": "AWS::SQS::QueuePolicy",
+      "Properties": {
+        "PolicyDocument": {
+          "Version": "2008-10-17",
+          "Statement": [{
+            "Effect": "Allow",
+            "Principal": {
+              "AWS":"*"  
+            },
+            "Action": [
+              "SQS:SendMessage"
+            ],
+            "Resource": {"Fn::GetAtt": ["ScanQueue", "Arn"]}
+          }]
+        },
+        "Queues": [{"Ref": "ScanQueue"}]
+      }
+    },
+    "ScanAutoScalingGroup": {
+      "Type": "AWS::AutoScaling::AutoScalingGroup",
+      "Properties": {
+        "DesiredCapacity": {"Ref": "AutoScalingDesiredCapacityParameter"},
+        "LaunchConfigurationName": { "Ref": "ScanLaunchConfiguration" },
+        "MaxSize": {"Ref": "AutoScalingMaxSizeParameter"},
+        "MinSize": "0",
+        "VPCZoneIdentifier": {"Ref": "SubnetsParameter"}
+      }
+    },
+    "ScanInstanceProfile": {
+      "Type": "AWS::IAM::InstanceProfile",
+      "Properties": {
+        "Path": "/",
+        "Roles": [{"Ref": "ScanIAMRole"}]
+      }
+    },
+    "ScanIAMRole": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [{
+            "Effect": "Allow",
+            "Principal": {
+              "Service": ["ec2.amazonaws.com"]
+            },
+            "Action": ["sts:AssumeRole"]
+          }]
+        },
+        "Path": "/",
+        "Policies": [{
+          "PolicyName": "s3",
+          "PolicyDocument": {
+            "Version": "2012-10-17",
+            "Statement": [{
+              "Effect": "Allow",
+              "Action": [
+                "s3:GetObject*",
+                "s3:DeleteObject*"
+              ],
+              "Resource": [
+                "*"
+              ]
+            }]
+          }
+        }, {
+          "PolicyName": "sqs",
+          "PolicyDocument": {
+            "Version": "2012-10-17",
+            "Statement": [{
+              "Effect": "Allow",
+              "Action": [
+                "sqs:DeleteMessage",
+                "sqs:ReceiveMessage"
+              ],
+              "Resource": [
+                {"Fn::GetAtt": ["ScanQueue", "Arn"]}
+              ]
+            }]
+          }
+        }]
+      }
+    },
+    "ScanLaunchConfiguration": {
+      "Type": "AWS::AutoScaling::LaunchConfiguration",
+      "Properties": {
+        "KeyName": {"Ref": "KeyNameParameter"},
+        "AssociatePublicIpAddress": true,
+        "EbsOptimized": false,
+        "IamInstanceProfile": {"Ref": "ScanInstanceProfile"},
+        "ImageId": {"Fn::FindInMap": ["EC2RegionMap", {"Ref": "AWS::Region"}, "AmazonLinuxAMIHVMEBSBacked64bit"]},
+        "InstanceType": {"Ref": "InstanceTypeParameter"},
+        "SecurityGroups": [{"Ref": "ScanSecurityGroup"}],
+        "UserData": { "Fn::Base64": { "Fn::Join": ["", [
+          "#!/bin/bash -ex", "\n",
+          "yum -y install clamav clamav-update", "\n",
+          "gem install aws-sdk", "\n",
+          "#TODO deploy worker.rb", "\n",
+          "ruby worker.rb &", "\n"
+        ]]}}
+      }
+    },
+    "ScanSecurityGroup": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "GroupDescription": "S3 Virus Scan",
+        "SecurityGroupEgress": [{
+          "IpProtocol": "-1",
+          "CidrIp": "0.0.0.0/0"
+        }],
+        "SecurityGroupIngress": [{
+          "CidrIp": "0.0.0.0/0",
+          "FromPort": 22,
+          "IpProtocol": "tcp",
+          "ToPort": 22
+        }],
+        "VpcId": {"Ref": "VPCParameter"}
+      }
+    }
+  }
+}
