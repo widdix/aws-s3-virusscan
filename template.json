@@ -30,6 +30,12 @@
     "KeyNameParameter": {
       "Description": "Provides the name of the EC2 key pair",
       "Type": "AWS::EC2::KeyPair::KeyName"
+    },
+    "DeleteInfectedFilesParameter": {
+      "Description": "Automatically delete infected files",
+      "Type": "String",
+      "Default": "true",
+      "AllowedValues": ["true", "false"]
     }
   },
   "Conditions": {
@@ -126,13 +132,6 @@
       "CreationPolicy": {
         "ResourceSignal": {
           "Timeout": "PT10M"
-        }
-      },
-      "UpdatePolicy": {
-        "AutoScalingRollingUpdate": {
-          "PauseTime": "PT10M",
-          "SuspendProcesses": ["AlarmNotification"],
-          "WaitOnResourceSignals": "true"
         }
       }
     },
@@ -245,7 +244,7 @@
             "files": {
               "/opt/aws-s3-virusscan-master/s3-virusscan.conf": {
                 "content": {"Fn::Join": ["", [
-                  "delete: true", "\n",
+                  "delete: ", {"Ref": "DeleteInfectedFilesParameter"}, "\n",
                   "region: ", {"Ref": "AWS::Region"}, "\n",
                   "queue: ", {"Ref": "ScanQueue"}, "\n",
                   "topic: ", {"Ref": "FindingsTopic"}, "\n"
