@@ -1,4 +1,5 @@
 #!/usr/bin/env ruby
+# chkconfig:    - 80 20
 
 APP_NAME = 's3-virusscan'  
 APP_PATH = '/opt/aws-s3-virusscan/daemon.rb'
