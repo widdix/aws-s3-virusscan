@@ -211,7 +211,7 @@
                 "command": "sed -i 's/Example/#Example/g' /etc/freshclam.conf"
               },
               "symlink": {
-                "command": "ln -s /etc/init.d/s3-virusscan /opt/aws-s3-virusscan/s3-virusscan"
+                "command": "ln -s /opt/aws-s3-virusscan/s3-virusscan /etc/init.d/s3-virusscan"
               }
             },
             "services": {
