@@ -7,6 +7,11 @@
       "Type": "Number",
       "Default": "1"
     },
+    "AutoScalingMinSizeParameter": {
+      "Description": "Min Size for Auto Scaling",
+      "Type": "Number",
+      "Default": "1"
+    },
     "AutoScalingMaxSizeParameter": {
       "Description": "Max Size for Auto Scaling",
       "Type": "Number",
@@ -17,7 +22,7 @@
       "Type": "AWS::EC2::VPC::Id"
     },
     "SubnetsParameter": {
-      "Description": "A list of subnet",
+      "Description": "A list of subnets",
       "Type": "List<AWS::EC2::Subnet::Id>"
     },
     "InstanceTypeParameter": {
@@ -31,16 +36,17 @@
     }
   },
   "Mappings": {
-    "EC2RegionMap": {
-      "ap-northeast-1": {"AmazonLinuxAMIHVMEBSBacked64bit": "ami-c7f90ec7"},
-      "ap-southeast-1": {"AmazonLinuxAMIHVMEBSBacked64bit": "ami-64d8e936"},
-      "ap-southeast-2": {"AmazonLinuxAMIHVMEBSBacked64bit": "ami-f39cecc9"},
-      "eu-central-1": {"AmazonLinuxAMIHVMEBSBacked64bit": "ami-ae221fb3"},
-      "eu-west-1": {"AmazonLinuxAMIHVMEBSBacked64bit": "ami-a30897d4"},
-      "sa-east-1": {"AmazonLinuxAMIHVMEBSBacked64bit": "ami-b72890aa"},
-      "us-east-1": {"AmazonLinuxAMIHVMEBSBacked64bit": "ami-10cae778"},
-      "us-west-1": {"AmazonLinuxAMIHVMEBSBacked64bit": "ami-cb14f28f"},
-      "us-west-2": {"AmazonLinuxAMIHVMEBSBacked64bit": "ami-e9527ed9"}
+    "RegionMap": {
+      "eu-west-1": {"AMI": "ami-31328842"},
+      "ap-southeast-1": {"AMI": "ami-e90dc68a"},
+      "ap-southeast-2": {"AMI": "ami-f2210191"},
+      "eu-central-1": {"AMI": "ami-e2df388d"},
+      "ap-northeast-2": {"AMI": "ami-6598510b"},
+      "ap-northeast-1": {"AMI": "ami-f80e0596"},
+      "us-east-1": {"AMI": "ami-08111162"},
+      "sa-east-1": {"AMI": "ami-1e159872"},
+      "us-west-1": {"AMI": "ami-1b0f7d7b"},
+      "us-west-2": {"AMI": "ami-c229c0a2"}
     }
   },
   "Resources": {
@@ -72,10 +78,22 @@
       "Type": "AWS::AutoScaling::AutoScalingGroup",
       "Properties": {
         "DesiredCapacity": {"Ref": "AutoScalingDesiredCapacityParameter"},
-        "LaunchConfigurationName": { "Ref": "ScanLaunchConfiguration" },
+        "LaunchConfigurationName": {"Ref": "ScanLaunchConfiguration"},
         "MaxSize": {"Ref": "AutoScalingMaxSizeParameter"},
-        "MinSize": "0",
+        "MinSize": {"Ref": "AutoScalingMinSizeParameter"},
         "VPCZoneIdentifier": {"Ref": "SubnetsParameter"}
+      },
+      "CreationPolicy": {
+        "ResourceSignal": {
+          "Timeout": "PT10M"
+        }
+      },
+      "UpdatePolicy": {
+        "AutoScalingRollingUpdate": {
+          "PauseTime": "PT10M",
+          "SuspendProcesses": ["AlarmNotification"],
+          "WaitOnResourceSignals": "true"
+        }
       }
     },
     "ScanInstanceProfile": {
@@ -134,27 +152,96 @@
     },
     "ScanLaunchConfiguration": {
       "Type": "AWS::AutoScaling::LaunchConfiguration",
+      "Metadata": {
+        "Comment": "Install application",
+        "AWS::CloudFormation::Init": {
+          "config": {
+            "packages": {
+              "yum": {
+                "clamd": [],
+                "clamav": [],
+                "clamav-update": []
+              },
+              "rubygems": {
+                "aws-sdk": [],
+                "daemons": []
+              }
+            },
+            "sources": {
+              "/opt/aws-s3-virusscan/s3-virusscan.conf": "https://github.com/widdix/(zipball|tarball)/<version> "
+            },
+            "files": {
+              "/opt/aws-s3-virusscan/s3-virusscan.conf": {
+                "content": {"Fn::Join": ["", [
+                  "region: ", {"Ref": "AWS::Region"}, "\n",
+                  "queue: ", {"Ref": "ScanQueue"}, "\n"
+                ]]},
+                "mode": "000644",
+                "owner": "root",
+                "group": "root"
+              },
+              "/etc/cfn/cfn-hup.conf": {
+                "content": {"Fn::Join": ["", [
+                  "[main]", "\n",
+                  "stack=", {"Ref": "AWS::StackId"}, "\n",
+                  "region=", {"Ref": "AWS::Region"}, "\n"
+                ]]},
+                "mode": "000400",
+                "owner": "root",
+                "group": "root"
+              },
+              "/etc/cfn/hooks.d/cfn-auto-reloader.conf": {
+                "content": {"Fn::Join": ["", [
+                  "[cfn-auto-reloader-hook]", "\n",
+                  "triggers=post.update", "\n",
+                  "path=Resources.LaunchConfig.Metadata.AWS::CloudFormation::Init", "\n",
+                  "action=/opt/aws/bin/cfn-init -v ",
+                  "         --stack ", {"Ref": "AWS::StackName"},
+                  "         --resource ScanLaunchConfiguration ",
+                  "         --region ", {"Ref": "AWS::Region"}, "\n",
+                  "runas=root", "\n"
+                ]]}
+              }
+            },
+            "commands": {
+              "enable_freshclam_cron": {
+                "command": "sed -i 's/FRESHCLAM_DELAY/#FRESHCLAM_DELAY/g' /etc/sysconfig/freshclam",
+              },
+              "enable_freshclam": {
+                "command": "sed -i 's/Example/#Example/g' /etc/freshclam.conf"
+              },
+              "symlink": {
+                "command": "ln -s /etc/init.d/s3-virusscan /opt/aws-s3-virusscan/s3-virusscan"
+              }
+            },
+            "services": {
+              "sysvinit": {
+                "cfn-hup": {"enabled": "true", "ensureRunning": "true", "files": ["/etc/cfn/cfn-hup.conf", "/etc/cfn/hooks.d/cfn-auto-reloader.conf"]},
+                "s3-virusscan": {"enabled": "true", "ensureRunning": "true", "files": ["/etc/init.d/s3-virusscan", "/opt/aws-s3-virusscan/daemon.rb", "/opt/aws-s3-virusscan/worker.rb"]}
+              }
+            }
+          }
+        }
+      },
       "Properties": {
         "KeyName": {"Ref": "KeyNameParameter"},
         "AssociatePublicIpAddress": true,
         "EbsOptimized": false,
         "IamInstanceProfile": {"Ref": "ScanInstanceProfile"},
-        "ImageId": {"Fn::FindInMap": ["EC2RegionMap", {"Ref": "AWS::Region"}, "AmazonLinuxAMIHVMEBSBacked64bit"]},
+        "ImageId": {"Fn::FindInMap": ["RegionMap", {"Ref": "AWS::Region"}, "AMI"]},
         "InstanceType": {"Ref": "InstanceTypeParameter"},
         "SecurityGroups": [{"Ref": "ScanSecurityGroup"}],
         "UserData": { "Fn::Base64": { "Fn::Join": ["", [
-          "#!/bin/bash -ex", "\n",
-          "yum -y install clamav clamav-update", "\n",
-          "gem install aws-sdk", "\n",
-          "#TODO deploy worker.rb", "\n",
-          "ruby worker.rb &", "\n"
+          "#!/bin/bash -x", "\n",
+          "/opt/aws/bin/cfn-init --verbose --stack=", {"Ref": "AWS::StackName"}, "--region=", {"Ref": "AWS::Region"}, " --resource=ScanLaunchConfiguration", "\n",
+          "/opt/aws/bin/cfn-signal --exit-code=$? --stack=", {"Ref": "AWS::StackName"}, " --region=", {"Ref": "AWS::Region"}, " --resource=ScanAutoScalingGroup", "\n"
         ]]}}
       }
     },
     "ScanSecurityGroup": {
       "Type": "AWS::EC2::SecurityGroup",
       "Properties": {
-        "GroupDescription": "S3 Virus Scan",
+        "GroupDescription": "S3 VirusScan",
         "SecurityGroupEgress": [{
           "IpProtocol": "-1",
           "CidrIp": "0.0.0.0/0"

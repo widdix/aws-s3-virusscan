@@ -1,0 +1,19 @@
+#!/usr/bin/env ruby
+
+APP_NAME = 's3-virusscan'  
+APP_PATH = '/opt/aws-s3-virusscan/daemon.rb'
+
+case ARGV.first
+  when 'start'
+    puts "Starting #{APP_NAME}..."
+    system(APP_PATH, 'start')
+  when 'stop'
+    system(APP_PATH, 'stop')
+  when 'restart'
+    system(APP_PATH, 'restart')
+end
+
+unless %w{start stop restart}.include? ARGV.first
+  puts "Usage: #{APP_NAME} {start|stop|restart}"
+  exit
+end
