@@ -20,7 +20,7 @@ If you like to receive emails if a virus was found you must subscribe to the SNS
 
 ![Subscribe Topic: Step 1](./docs/subscribe_topic_step1.png?raw=true "Subscribe Topic: Step 1")
 
-![Subscribe Topic: Step 2](./docs/subscribe_topic_step1.png?raw=true "Subscribe Topic: Step 2")
+![Subscribe Topic: Step 2](./docs/subscribe_topic_step2.png?raw=true "Subscribe Topic: Step 2")
 
 You will receive a confirmation email.
 
