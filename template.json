@@ -50,9 +50,15 @@
     }
   },
   "Resources": {
+    "FindingsTopic": {
+      "Type": "AWS::SNS::Topic",
+      "Properties": {
+      }
+    },
     "ScanQueue": {
       "Type": "AWS::SQS::Queue",
       "Properties": {
+        "VisibilityTimeout": 300
       }
     },
     "ScanQueueFullAlarm": {
@@ -199,6 +205,20 @@
               ]
             }]
           }
+        }, {
+          "PolicyName": "sns",
+          "PolicyDocument": {
+            "Version": "2012-10-17",
+            "Statement": [{
+              "Effect": "Allow",
+              "Action": [
+                "sns:Publish"
+              ],
+              "Resource": [
+                {"Ref": "FindingsTopic"}
+              ]
+            }]
+          }
         }]
       }
     },
@@ -225,8 +245,10 @@
             "files": {
               "/opt/aws-s3-virusscan-master/s3-virusscan.conf": {
                 "content": {"Fn::Join": ["", [
+                  "delete: true", "\n",
                   "region: ", {"Ref": "AWS::Region"}, "\n",
-                  "queue: ", {"Ref": "ScanQueue"}, "\n"
+                  "queue: ", {"Ref": "ScanQueue"}, "\n",
+                  "topic: ", {"Ref": "FindingsTopic"}, "\n"
                 ]]},
                 "mode": "000644",
                 "owner": "root",
