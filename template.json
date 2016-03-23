@@ -246,6 +246,23 @@
               ]
             }]
           }
+        }, {
+          "PolicyName": "logs",
+          "PolicyDocument":{
+            "Version": "2012-10-17",
+            "Statement": [{
+              "Effect": "Allow",
+              "Action": [
+                "logs:CreateLogGroup",
+                "logs:CreateLogStream",
+                "logs:PutLogEvents",
+                "logs:DescribeLogStreams"
+              ],
+              "Resource": [
+                "arn:aws:logs:*:*:*"
+              ]
+            }]
+          }
         }]
       }
     },
@@ -259,7 +276,8 @@
               "yum": {
                 "clamd": [],
                 "clamav": [],
-                "clamav-update": []
+                "clamav-update": [],
+                "awslogs": []
               },
               "rubygems": {
                 "aws-sdk": ["2.2.29"],
@@ -270,6 +288,56 @@
               "/opt": "https://github.com/widdix/aws-s3-virusscan/archive/master.zip"
             },
             "files": {
+              "/etc/awslogs/awslogs.conf": {
+                "content": {"Fn::Join": ["", [
+                  "[general]", "\n",
+                  "state_file = /var/lib/awslogs/agent-state", "\n",
+                  "\n",
+                  "[/var/log/messages]", "\n",
+                  "datetime_format = %b %d %H:%M:%S", "\n",
+                  "file = /var/log/messages", "\n",
+                  "buffer_duration = 5000", "\n",
+                  "log_stream_name = {instance_id}", "\n",
+                  "initial_position = start_of_file", "\n",
+                  "log_group_name = /var/log/messages", "\n",
+                  "\n",
+                  "[/var/log/secure]", "\n",
+                  "datetime_format = %b %d %H:%M:%S", "\n",
+                  "file = /var/log/secure", "\n",
+                  "buffer_duration = 5000", "\n",
+                  "log_stream_name = {instance_id}", "\n",
+                  "initial_position = start_of_file", "\n",
+                  "log_group_name = /var/log/secure", "\n",
+                  "\n",
+                  "[/var/log/cron]", "\n",
+                  "datetime_format = %b %d %H:%M:%S", "\n",
+                  "file = /var/log/cron", "\n",
+                  "buffer_duration = 5000", "\n",
+                  "log_stream_name = {instance_id}", "\n",
+                  "initial_position = start_of_file", "\n",
+                  "log_group_name = /var/log/cron", "\n",
+                  "\n",
+                  "[/var/log/cloud-init.log]", "\n",
+                  "datetime_format = %b %d %H:%M:%S", "\n",
+                  "file = /var/log/cloud-init.log", "\n",
+                  "buffer_duration = 5000", "\n",
+                  "log_stream_name = {instance_id}", "\n",
+                  "initial_position = start_of_file", "\n",
+                  "log_group_name = /var/log/cloud-init.log", "\n",
+                  "\n",
+                  "[/var/log/cfn-init.log]", "\n",
+                  "datetime_format = %Y-%m-%d %H:%M:%S", "\n",
+                  "file = /var/log/cfn-init.log", "\n",
+                  "buffer_duration = 5000", "\n",
+                  "log_stream_name = {instance_id}", "\n",
+                  "initial_position = start_of_file", "\n",
+                  "log_group_name = /var/log/cfn-init.log", "\n",
+                  "\n"
+                ]]},
+                "mode": "000644",
+                "owner": "root",
+                "group": "root"
+              },
               "/opt/aws-s3-virusscan-master/s3-virusscan.conf": {
                 "content": {"Fn::Join": ["", [
                   "delete: ", {"Ref": "DeleteInfectedFilesParameter"}, "\n",
@@ -295,11 +363,8 @@
                 "content": {"Fn::Join": ["", [
                   "[cfn-auto-reloader-hook]", "\n",
                   "triggers=post.update", "\n",
-                  "path=Resources.LaunchConfig.Metadata.AWS::CloudFormation::Init", "\n",
-                  "action=/opt/aws/bin/cfn-init -v ",
-                  "         --stack ", {"Ref": "AWS::StackName"},
-                  "         --resource ScanLaunchConfiguration ",
-                  "         --region ", {"Ref": "AWS::Region"}, "\n",
+                  "path=Resources.ScanLaunchConfiguration.Metadata.AWS::CloudFormation::Init", "\n",
+                  "action=/opt/aws/bin/cfn-init --verbose --stack=", {"Ref": "AWS::StackName"}, " --region=", {"Ref": "AWS::Region"}, " --resource=ScanLaunchConfiguration", "\n",
                   "runas=root", "\n"
                 ]]}
               }
@@ -312,10 +377,12 @@
                 "command": "sed -i 's/Example/#Example/g' /etc/freshclam.conf"
               },
               "c_symlink_app_dir": {
-                "command": "ln -s /opt/aws-s3-virusscan-master /opt/aws-s3-virusscan"
+                "command": "ln -s /opt/aws-s3-virusscan-master /opt/aws-s3-virusscan",
+                "test": "test ! -e /opt/aws-s3-virusscan"
               },
               "d_symlink_app_initd": {
-                "command": "ln -s /opt/aws-s3-virusscan/s3-virusscan /etc/init.d/s3-virusscan"
+                "command": "ln -s /opt/aws-s3-virusscan/s3-virusscan /etc/init.d/s3-virusscan",
+                "test": "test ! -e /etc/init.d/s3-virusscan"
               },
               "e_chmod_app_ruby": {
                 "command": "chmod +x *.rb",
@@ -324,10 +391,21 @@
               "f_chmod_app_initd": {
                 "command": "chmod +x s3-virusscan",
                 "cwd": "/opt/aws-s3-virusscan"
+              },
+              "g_update_clamav_db": {
+                "command": "freshclam"
               }
             },
             "services": {
               "sysvinit": {
+                "awslogs": {
+                  "enabled": "true",
+                  "ensureRunning": "true",
+                  "packages": {
+                    "yum": ["awslogs"]
+                  },
+                  "files": ["/etc/awslogs/awslogs.conf"]
+                },
                 "cfn-hup": {
                   "enabled": "true",
                   "ensureRunning": "true",

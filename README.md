@@ -39,3 +39,4 @@ and upload that file to your S3 bucket.
 ## TODO
 
 * Support versioned S3 buckets
+* An initial scan may also be useful. This could be implemented with a Lambda function that pushes every key to SQS.
