@@ -24,10 +24,6 @@ If you like to receive emails if a virus was found you must subscribe to the SNS
 
 You will receive a confirmation email.
 
-## Configuration
-
-connect Create Events of the S3 buckets to be scanned with the SQS queue from the stack
-
 ## TODO
 
 * Support versioned S3 buckets
