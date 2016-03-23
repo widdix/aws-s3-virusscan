@@ -12,9 +12,11 @@ case ARGV.first
     system(APP_PATH, 'stop')
   when 'restart'
     system(APP_PATH, 'restart')
+  when 'status'
+    system(APP_PATH, 'status')
 end
 
-unless %w{start stop restart}.include? ARGV.first
-  puts "Usage: #{APP_NAME} {start|stop|restart}"
+unless %w{start stop restart status}.include? ARGV.first
+  puts "Usage: #{APP_NAME} {start|stop|restart|status}"
   exit
 end
