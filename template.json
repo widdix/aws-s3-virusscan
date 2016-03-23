@@ -300,8 +300,17 @@
             },
             "services": {
               "sysvinit": {
-                "cfn-hup": {"enabled": "true", "ensureRunning": "true", "files": ["/etc/cfn/cfn-hup.conf", "/etc/cfn/hooks.d/cfn-auto-reloader.conf"]},
-                "s3-virusscan": {"enabled": "true", "ensureRunning": "true", "files": ["/etc/init.d/s3-virusscan", "/opt/aws-s3-virusscan/daemon.rb", "/opt/aws-s3-virusscan/worker.rb"]}
+                "cfn-hup": {
+                  "enabled": "true",
+                  "ensureRunning": "true",
+                  "files": ["/etc/cfn/cfn-hup.conf", "/etc/cfn/hooks.d/cfn-auto-reloader.conf"]
+                },
+                "s3-virusscan": {
+                  "enabled": "true",
+                  "ensureRunning": "true",
+                  "files": ["/opt/aws-s3-virusscan-master/s3-virusscan.conf"],
+                  "sources": ["/opt"]
+                }
               }
             }
           }
