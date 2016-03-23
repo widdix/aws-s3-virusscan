@@ -10,7 +10,7 @@ Antivirus for S3 buckets. You can connect as many buckets as you like by using [
 
 ## How does it work
 
-Sometimes a figure says more then a thousand words:
+A picture is worth a thousand words:
 
 ![Architecture](./docs/architecture.png?raw=true "Architecture")
 
