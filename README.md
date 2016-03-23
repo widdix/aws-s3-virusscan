@@ -36,6 +36,17 @@ X5O!P%@AP[4\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*
 
 and upload that file to your S3 bucket.
 
+## How does it work
+
+Sometimes a figure says more then a thousand words:
+
+![Architecture](./docs/architecture.png?raw=true "Architecture")
+
+1. S3 VirusScan uses a SQS queue to decouple scan jobs from the ClamAV workers. Each S3 bucket can fire events to that SQS queue in case of new objects. This feature of S3 is called [S3 Event Notifications](http://docs.aws.amazon.com/AmazonS3/latest/dev/NotificationHowTo.html).
+1. The SQS queue is consumed by a fleet of EC2 instances running in an Auto Scaling Group. If the number of outstanding scan jobs reaches a treshold a new ClamAV worker is automatically added. If the queue is mostly empty workers are removed.
+1. The ClamAV workers run a simple ruby script that executes the [clamscan](http://linux.die.net/man/1/clamscan) command. In the background the virus db is updated every three hours.
+1. If `clamscan` finds a virus the file is directly deleted (you can configure that) and a SNS notification is published.
+
 ## TODO
 
 * Support versioned S3 buckets
