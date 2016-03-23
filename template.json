@@ -256,23 +256,23 @@
               }
             },
             "commands": {
-              "enable_freshclam_cron": {
+              "a_enable_freshclam_cron": {
                 "command": "sed -i 's/FRESHCLAM_DELAY/#FRESHCLAM_DELAY/g' /etc/sysconfig/freshclam"
               },
-              "enable_freshclam": {
+              "b_enable_freshclam": {
                 "command": "sed -i 's/Example/#Example/g' /etc/freshclam.conf"
               },
-              "symlink_app_dir": {
+              "c_symlink_app_dir": {
                 "command": "ln -s /opt/aws-s3-virusscan-master /opt/aws-s3-virusscan"
               },
-              "symlink_app_initd": {
+              "d_symlink_app_initd": {
                 "command": "ln -s /opt/aws-s3-virusscan/s3-virusscan /etc/init.d/s3-virusscan"
               },
-              "chmod_app_ruby": {
+              "e_chmod_app_ruby": {
                 "command": "chmod +x *.rb",
                 "cwd": "/opt/aws-s3-virusscan"
               },
-              "chmod_app_initd": {
+              "f_chmod_app_initd": {
                 "command": "chmod +x s3-virusscan",
                 "cwd": "/opt/aws-s3-virusscan"
               }
