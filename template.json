@@ -168,7 +168,7 @@
               }
             },
             "sources": {
-              "/opt/aws-s3-virusscan/s3-virusscan.conf": "https://github.com/widdix/(zipball|tarball)/<version> "
+              "/opt/aws-s3-virusscan": "https://github.com/widdix/aws-s3-virusscan/archive/master.zip"
             },
             "files": {
               "/opt/aws-s3-virusscan/s3-virusscan.conf": {
