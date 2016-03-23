@@ -24,6 +24,16 @@ If you like to receive emails if a virus was found you must subscribe to the SNS
 
 You will receive a confirmation email.
 
+## Test
+
+Create a [EICAR Standard Anti-Virus Test File](https://en.wikipedia.org/wiki/EICAR_test_file) with the following content:
+
+```
+X5O!P%@AP[4\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*
+```
+
+and upload that file to your S3 bucket.
+
 ## TODO
 
 * Support versioned S3 buckets
