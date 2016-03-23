@@ -18,6 +18,4 @@ connect Create Events of the S3 buckets to be scanned with the SQS queue from th
 
 ## TODO
 
-* What about source from github (https://github.com/<your directory>/(zipball|tarball)/<version> )
-* Auto Scaling based on Queue Size
-* What about S3 versioned buckets
+* Support versioned S3 buckets

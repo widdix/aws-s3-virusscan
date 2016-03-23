@@ -2,27 +2,24 @@
   "AWSTemplateFormatVersion": "2010-09-09",
   "Description": "S3 VirusScan",
   "Parameters": {
-    "AutoScalingDesiredCapacityParameter": {
-      "Description": "Desired Capacity for Auto Scaling",
-      "Type": "Number",
-      "Default": "1"
-    },
     "AutoScalingMinSizeParameter": {
-      "Description": "Min Size for Auto Scaling",
+      "Description": "Min Size for Auto Scaling (if 0, S3 VirusScan scales down entirely to 0 EC2 instances!)",
       "Type": "Number",
-      "Default": "1"
+      "Default": "1",
+      "MinValue": "0"
     },
     "AutoScalingMaxSizeParameter": {
       "Description": "Max Size for Auto Scaling",
       "Type": "Number",
-      "Default": "1"
+      "Default": "1",
+      "MinValue": "1"
     },
     "VPCParameter": {
       "Description": "VPC",
       "Type": "AWS::EC2::VPC::Id"
     },
     "SubnetsParameter": {
-      "Description": "A list of subnets",
+      "Description": "A list of subnets (should be either public or using a S3 VPC endpoint)",
       "Type": "List<AWS::EC2::Subnet::Id>"
     },
     "InstanceTypeParameter": {
@@ -34,6 +31,9 @@
       "Description": "Provides the name of the EC2 key pair",
       "Type": "AWS::EC2::KeyPair::KeyName"
     }
+  },
+  "Conditions": {
+    "HasKeyNameParameter": {"Fn::Not": [{"Fn::Equals": ["", {"Ref": "KeyNameParameter"}]}]}
   },
   "Mappings": {
     "RegionMap": {
@@ -53,6 +53,40 @@
     "ScanQueue": {
       "Type": "AWS::SQS::Queue",
       "Properties": {
+      }
+    },
+    "ScanQueueFullAlarm": {
+      "Type": "AWS::CloudWatch::Alarm",
+      "Properties": {
+        "AlarmActions": [{"Ref": "ScanScaleUp"}],
+        "ComparisonOperator": "GreaterThanThreshold",
+        "Dimensions": [{
+          "Name": "QueueName",
+          "Value": {"Fn::GetAtt": ["ScanQueue", "QueueName"]}
+        }],
+        "EvaluationPeriods": "1",
+        "MetricName": "ApproximateNumberOfMessagesVisible",
+        "Namespace": "AWS/SQS",
+        "Period": "60",
+        "Statistic": "Sum",
+        "Threshold": "100"
+      }
+    },
+    "ScanQueueEmptyAlarm": {
+      "Type": "AWS::CloudWatch::Alarm",
+      "Properties": {
+        "AlarmActions": [{"Ref": "ScanScaleDown"}],
+        "ComparisonOperator": "LessThanOrEqualToThreshold",
+        "Dimensions": [{
+          "Name": "QueueName",
+          "Value": {"Fn::GetAtt": ["ScanQueue", "QueueName"]}
+        }],
+        "EvaluationPeriods": "1",
+        "MetricName": "ApproximateNumberOfMessagesVisible",
+        "Namespace": "AWS/SQS",
+        "Period": "60",
+        "Statistic": "Sum",
+        "Threshold": "0"
       }
     },
     "ScanQueuePolicy": {
@@ -77,7 +111,7 @@
     "ScanAutoScalingGroup": {
       "Type": "AWS::AutoScaling::AutoScalingGroup",
       "Properties": {
-        "DesiredCapacity": {"Ref": "AutoScalingDesiredCapacityParameter"},
+        "DesiredCapacity": "1",
         "LaunchConfigurationName": {"Ref": "ScanLaunchConfiguration"},
         "MaxSize": {"Ref": "AutoScalingMaxSizeParameter"},
         "MinSize": {"Ref": "AutoScalingMinSizeParameter"},
@@ -94,6 +128,24 @@
           "SuspendProcesses": ["AlarmNotification"],
           "WaitOnResourceSignals": "true"
         }
+      }
+    },
+    "ScanScaleUp": {
+      "Type": "AWS::AutoScaling::ScalingPolicy",
+      "Properties": {
+        "AdjustmentType": "ChangeInCapacity",
+        "AutoScalingGroupName": {"Ref": "ScanAutoScalingGroup"},
+        "Cooldown": "300",
+        "ScalingAdjustment": 1
+      }
+    },
+    "ScanScaleDown": {
+      "Type": "AWS::AutoScaling::ScalingPolicy",
+      "Properties": {
+        "AdjustmentType": "ChangeInCapacity",
+        "AutoScalingGroupName": {"Ref": "ScanAutoScalingGroup"},
+        "Cooldown": "300",
+        "ScalingAdjustment": -1
       }
     },
     "ScanInstanceProfile": {
@@ -163,15 +215,15 @@
                 "clamav-update": []
               },
               "rubygems": {
-                "aws-sdk": [],
-                "daemons": []
+                "aws-sdk": ["2.2.29"],
+                "daemons": ["1.2.3"]
               }
             },
             "sources": {
-              "/opt/aws-s3-virusscan": "https://github.com/widdix/aws-s3-virusscan/archive/master.zip"
+              "/opt": "https://github.com/widdix/aws-s3-virusscan/archive/master.zip"
             },
             "files": {
-              "/opt/aws-s3-virusscan/s3-virusscan.conf": {
+              "/opt/aws-s3-virusscan-master/s3-virusscan.conf": {
                 "content": {"Fn::Join": ["", [
                   "region: ", {"Ref": "AWS::Region"}, "\n",
                   "queue: ", {"Ref": "ScanQueue"}, "\n"
@@ -205,13 +257,24 @@
             },
             "commands": {
               "enable_freshclam_cron": {
-                "command": "sed -i 's/FRESHCLAM_DELAY/#FRESHCLAM_DELAY/g' /etc/sysconfig/freshclam",
+                "command": "sed -i 's/FRESHCLAM_DELAY/#FRESHCLAM_DELAY/g' /etc/sysconfig/freshclam"
               },
               "enable_freshclam": {
                 "command": "sed -i 's/Example/#Example/g' /etc/freshclam.conf"
               },
-              "symlink": {
+              "symlink_app_dir": {
+                "command": "ln -s /opt/aws-s3-virusscan-master /opt/aws-s3-virusscan"
+              },
+              "symlink_app_initd": {
                 "command": "ln -s /opt/aws-s3-virusscan/s3-virusscan /etc/init.d/s3-virusscan"
+              },
+              "chmod_app_ruby": {
+                "command": "chmod +x *.rb",
+                "cwd": "/opt/aws-s3-virusscan"
+              },
+              "chmod_app_initd": {
+                "command": "chmod +x s3-virusscan",
+                "cwd": "/opt/aws-s3-virusscan"
               }
             },
             "services": {
@@ -224,7 +287,7 @@
         }
       },
       "Properties": {
-        "KeyName": {"Ref": "KeyNameParameter"},
+        "KeyName": {"Fn::If": ["HasKeyNameParameter", {"Ref": "KeyNameParameter"}, {"Ref": "AWS::NoValue"}]},
         "AssociatePublicIpAddress": true,
         "EbsOptimized": false,
         "IamInstanceProfile": {"Ref": "ScanInstanceProfile"},
@@ -233,7 +296,7 @@
         "SecurityGroups": [{"Ref": "ScanSecurityGroup"}],
         "UserData": { "Fn::Base64": { "Fn::Join": ["", [
           "#!/bin/bash -x", "\n",
-          "/opt/aws/bin/cfn-init --verbose --stack=", {"Ref": "AWS::StackName"}, "--region=", {"Ref": "AWS::Region"}, " --resource=ScanLaunchConfiguration", "\n",
+          "/opt/aws/bin/cfn-init --verbose --stack=", {"Ref": "AWS::StackName"}, " --region=", {"Ref": "AWS::Region"}, " --resource=ScanLaunchConfiguration", "\n",
           "/opt/aws/bin/cfn-signal --exit-code=$? --stack=", {"Ref": "AWS::StackName"}, " --region=", {"Ref": "AWS::Region"}, " --resource=ScanAutoScalingGroup", "\n"
         ]]}}
       }
