@@ -16,6 +16,8 @@ Configure the buckets you want to connect to S3 VirusScan as shown in the next f
 
 ![Configure Event Notifications](./docs/configure_event_notifications.png?raw=true "Configure Event Notifications")
 
+**Make sure you select the *-ScanQueue-* NOT the *-ScanQueueDLQ-*!**
+
 If you like to receive emails if a virus was found you must subscribe to the SNS topic as sown in the next two figures:
 
 ![Subscribe Topic: Step 1](./docs/subscribe_topic_step1.png?raw=true "Subscribe Topic: Step 1")

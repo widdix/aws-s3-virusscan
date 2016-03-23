@@ -28,7 +28,7 @@
       "Default": "t2.micro"
     },
     "KeyNameParameter": {
-      "Description": "Provides the name of the EC2 key pair",
+      "Description": "Provide an EC2 key pair if you want to login via SSH",
       "Type": "AWS::EC2::KeyPair::KeyName"
     },
     "DeleteInfectedFilesParameter": {
@@ -64,7 +64,11 @@
     "ScanQueue": {
       "Type": "AWS::SQS::Queue",
       "Properties": {
-        "VisibilityTimeout": 300
+        "VisibilityTimeout": 300,
+        "RedrivePolicy": {
+          "deadLetterTargetArn": {"Fn::GetAtt": ["ScanQueueDLQ", "Arn"]},
+          "maxReceiveCount": 3
+        }
       }
     },
     "ScanQueueFullAlarm": {
@@ -118,6 +122,30 @@
           }]
         },
         "Queues": [{"Ref": "ScanQueue"}]
+      }
+    },
+    "ScanQueueDLQ": {
+      "Type": "AWS::SQS::Queue",
+      "Properties": {
+        "MessageRetentionPeriod": 1209600
+      }
+    },
+    "ScanQueueDLQAlarm": {
+      "Type": "AWS::CloudWatch::Alarm",
+      "Properties": {
+        "AlarmDescription": "Alarm if dead letter queue has messages",
+        "Namespace": "AWS/SQS",
+        "MetricName": "ApproximateNumberOfMessagesVisible",
+        "Dimensions": [{
+          "Name": "QueueName",
+          "Value": {"Fn::GetAtt": ["ScanQueueDLQ", "QueueName"]}
+        }],
+        "Statistic": "Sum",
+        "Period": "60",
+        "EvaluationPeriods": "1",
+        "Threshold": "1",
+        "ComparisonOperator": "GreaterThanOrEqualToThreshold",
+        "AlarmActions": [{"Ref": "FindingsTopic"}]
       }
     },
     "ScanAutoScalingGroup": {
