@@ -269,7 +269,6 @@
     "ScanLaunchConfiguration": {
       "Type": "AWS::AutoScaling::LaunchConfiguration",
       "Metadata": {
-        "Comment": "Install application",
         "AWS::CloudFormation::Init": {
           "config": {
             "packages": {
@@ -430,7 +429,7 @@
         "ImageId": {"Fn::FindInMap": ["RegionMap", {"Ref": "AWS::Region"}, "AMI"]},
         "InstanceType": {"Ref": "InstanceTypeParameter"},
         "SecurityGroups": [{"Ref": "ScanSecurityGroup"}],
-        "UserData": { "Fn::Base64": { "Fn::Join": ["", [
+        "UserData": {"Fn::Base64": {"Fn::Join": ["", [
           "#!/bin/bash -x", "\n",
           "/opt/aws/bin/cfn-init --verbose --stack=", {"Ref": "AWS::StackName"}, " --region=", {"Ref": "AWS::Region"}, " --resource=ScanLaunchConfiguration", "\n",
           "/opt/aws/bin/cfn-signal --exit-code=$? --stack=", {"Ref": "AWS::StackName"}, " --region=", {"Ref": "AWS::Region"}, " --resource=ScanAutoScalingGroup", "\n"
