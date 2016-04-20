@@ -24,11 +24,15 @@ poller.poll do |msg|
       bucket = record['s3']['bucket']['name']
       key = URI.decode(record['s3']['object']['key']).gsub('+', ' ')
       log.debug "scanning s3://#{bucket}/#{key}..."
-      s3.get_object(
-        response_target: '/tmp/target',
-        bucket: bucket,
-        key: key
-      )
+      begin
+        s3.get_object(
+          response_target: '/tmp/target',
+          bucket: bucket,
+          key: key
+        )
+      rescue Aws::S3::Errors::NoSuchKey
+        next
+      end
       if system('clamscan /tmp/target')
         log.debug "s3://#{bucket}/#{key} was scanned without findings"
       else
