@@ -113,7 +113,7 @@
           "Statement": [{
             "Effect": "Allow",
             "Principal": {
-              "AWS":"*"  
+              "AWS":"*"
             },
             "Action": [
               "SQS:SendMessage"
@@ -155,11 +155,26 @@
         "LaunchConfigurationName": {"Ref": "ScanLaunchConfiguration"},
         "MaxSize": {"Ref": "AutoScalingMaxSizeParameter"},
         "MinSize": {"Ref": "AutoScalingMinSizeParameter"},
-        "VPCZoneIdentifier": {"Ref": "SubnetsParameter"}
+        "VPCZoneIdentifier": {"Ref": "SubnetsParameter"},
+        "Tags": [
+          {
+            "Key": "Name",
+            "PropagateAtLaunch": true,
+            "Value": "ClamAV"
+          }
+        ]
       },
       "CreationPolicy": {
         "ResourceSignal": {
           "Timeout": "PT20M"
+        }
+      },
+      "UpdatePolicy": {
+        "AutoScalingRollingUpdate": {
+          "MaxBatchSize": 1,
+          "MinInstancesInService": {"Ref": "AutoScalingMinSizeParameter"},
+          "PauseTime": "PT600S",
+          "WaitOnResourceSignals": true
         }
       }
     },
