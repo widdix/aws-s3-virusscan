@@ -168,6 +168,14 @@
         "ResourceSignal": {
           "Timeout": "PT20M"
         }
+      },
+      "UpdatePolicy": {
+        "AutoScalingRollingUpdate": {
+          "MaxBatchSize": 1,
+          "MinInstancesInService": {"Ref": "AutoScalingMinSizeParameter"},
+          "PauseTime": "PT600S",
+          "WaitOnResourceSignals": true
+        }
       }
     },
     "ScanScaleUp": {
