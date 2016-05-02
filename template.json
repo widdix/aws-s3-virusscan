@@ -357,6 +357,7 @@
                   "delete: ", {"Ref": "DeleteInfectedFilesParameter"}, "\n",
                   "region: ", {"Ref": "AWS::Region"}, "\n",
                   "queue: ", {"Ref": "ScanQueue"}, "\n",
+                  "dlq: ", {"Ref": "ScanQueueDLQ"}, "\n",
                   "topic: ", {"Ref": "FindingsTopic"}, "\n"
                 ]]},
                 "mode": "000644",
