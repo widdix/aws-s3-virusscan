@@ -130,6 +130,25 @@
         "MessageRetentionPeriod": 1209600
       }
     },
+    "ScanQueueDLQPolicy": {
+      "Type": "AWS::SQS::QueuePolicy",
+      "Properties": {
+        "PolicyDocument": {
+          "Version": "2008-10-17",
+          "Statement": [{
+            "Effect": "Allow",
+            "Principal": {
+              "AWS":"*"
+            },
+            "Action": [
+              "SQS:SendMessage"
+            ],
+            "Resource": {"Fn::GetAtt": ["ScanQueue", "Arn"]}
+          }]
+        },
+        "Queues": [{"Ref": "ScanQueueDLQ"}]
+      }
+    },
     "ScanQueueDLQAlarm": {
       "Type": "AWS::CloudWatch::Alarm",
       "Properties": {
@@ -244,21 +263,6 @@
               ],
               "Resource": [
                 {"Fn::GetAtt": ["ScanQueue", "Arn"]}
-              ]
-            }]
-          }
-        }, {
-          "PolicyName": "sqs-dlq",
-          "PolicyDocument": {
-            "Version": "2012-10-17",
-            "Statement": [{
-              "Effect": "Allow",
-              "Action": [
-                "sqs:DeleteMessage",
-                "sqs:ReceiveMessage"
-              ],
-              "Resource": [
-                {"Fn::GetAtt": ["ScanQueueDLQ", "Arn"]}
               ]
             }]
           }
