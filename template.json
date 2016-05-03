@@ -267,6 +267,21 @@
             }]
           }
         }, {
+          "PolicyName": "sqs-dlq",
+          "PolicyDocument": {
+            "Version": "2012-10-17",
+            "Statement": [{
+              "Effect": "Allow",
+              "Action": [
+                "sqs:DeleteMessage",
+                "sqs:ReceiveMessage"
+              ],
+              "Resource": [
+                {"Fn::GetAtt": ["ScanQueueDLQ", "Arn"]}
+              ]
+            }]
+          }
+        }, {
           "PolicyName": "sns",
           "PolicyDocument": {
             "Version": "2012-10-17",
