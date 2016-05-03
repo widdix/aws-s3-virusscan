@@ -33,32 +33,11 @@ poller.poll do |msg|
         log.debug "no key found s3://#{bucket}/#{key}"
         next
       end
-      log.debug "scanning s3://#{bucket}/#{key}..."
-      if system('clamscan /tmp/target')
-        log.debug "s3://#{bucket}/#{key} was scanned without findings"
-      else
-        if conf['delete']
-          log.error "s3://#{bucket}/#{key} is infected, deleting..."
-          sns.publish(
-              topic_arn: conf['topic'],
-              message: "s3://#{bucket}/#{key} is infected, deleting...",
-              subject: "s3-virusscan s3://#{bucket}"
-          )
-          s3.delete_object(
-              bucket: bucket,
-              key: key
-          )
-          log.error "s3://#{bucket}/#{key} was deleted"
-        else
-          log.error "s3://#{bucket}/#{key} is infected"
-          sns.publish(
-              topic_arn: conf['topic'],
-              message: "s3://#{bucket}/#{key} is infected",
-              subject: "s3-virusscan s3://#{bucket}"
-          )
-        end
-      end
-      system('rm /tmp/target')
+      sns.publish(
+          topic_arn: conf['topic'],
+          message: "s3://#{bucket}/#{key} please recheck this object",
+          subject: "s3-virusscan s3://#{bucket}"
+      )
     end
   end
 end
