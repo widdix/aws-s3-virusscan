@@ -409,6 +409,14 @@
               },
               "g_update_clamav_db": {
                 "command": "freshclam"
+              },
+              "h_chmod_app_initd": {
+                "command": "chmod +x s3-virusscan-cleaner",
+                "cwd": "/opt/aws-s3-virusscan"
+              },
+              "i_symlink_app_initd": {
+                "command": "ln -s /opt/aws-s3-virusscan/s3-virusscan-cleaner /etc/init.d/s3-virusscan-cleaner",
+                "test": "test ! -e /etc/init.d/s3-virusscan-cleaner"
               }
             },
             "services": {
@@ -427,6 +435,12 @@
                   "files": ["/etc/cfn/cfn-hup.conf", "/etc/cfn/hooks.d/cfn-auto-reloader.conf"]
                 },
                 "s3-virusscan": {
+                  "enabled": "true",
+                  "ensureRunning": "true",
+                  "files": ["/opt/aws-s3-virusscan-master/s3-virusscan.conf"],
+                  "sources": ["/opt"]
+                },
+                "s3-virusscan-cleaner": {
                   "enabled": "true",
                   "ensureRunning": "true",
                   "files": ["/opt/aws-s3-virusscan-master/s3-virusscan.conf"],
