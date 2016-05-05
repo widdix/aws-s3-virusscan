@@ -39,7 +39,7 @@ poller.poll do |msg|
             message: "s3://#{bucket}/#{key} is infected, deleting...",
             subject: "s3-virusscan s3://#{bucket}",
             message_attributes: {
-              "String" => {
+              "key" => {
                 data_type: "String",
                 string_value: "s3://#{bucket}/#{key}"
               }
@@ -57,7 +57,7 @@ poller.poll do |msg|
             message: "s3://#{bucket}/#{key} is infected",
             subject: "s3-virusscan s3://#{bucket}",
             message_attributes: {
-              "String" => {
+              "key" => {
                 data_type: "String",
                 string_value: "s3://#{bucket}/#{key}"
               }
