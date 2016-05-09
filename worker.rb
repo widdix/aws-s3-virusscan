@@ -37,7 +37,13 @@ poller.poll do |msg|
           sns.publish(
             topic_arn: conf['topic'],
             message: "s3://#{bucket}/#{key} is infected, deleting...",
-            subject: "s3-virusscan s3://#{bucket}"
+            subject: "s3-virusscan s3://#{bucket}",
+            message_attributes: {
+              "key" => {
+                data_type: "String",
+                string_value: "s3://#{bucket}/#{key}"
+              }
+            }
           )
           s3.delete_object(
             bucket: bucket,
@@ -49,7 +55,13 @@ poller.poll do |msg|
           sns.publish(
             topic_arn: conf['topic'],
             message: "s3://#{bucket}/#{key} is infected",
-            subject: "s3-virusscan s3://#{bucket}"
+            subject: "s3-virusscan s3://#{bucket}",
+            message_attributes: {
+              "key" => {
+                data_type: "String",
+                string_value: "s3://#{bucket}/#{key}"
+              }
+            }
           )
         end
       end
