@@ -433,7 +433,7 @@
         "AssociatePublicIpAddress": true,
         "EbsOptimized": false,
         "BlockDeviceMappings": [{
-    			"DeviceName": "/dev/xvda",
+    			"DeviceName": "/dev/sda1",
     			"Ebs": {
     				"VolumeSize": 8
     			}
