@@ -156,13 +156,13 @@
         "MaxSize": {"Ref": "AutoScalingMaxSizeParameter"},
         "MinSize": {"Ref": "AutoScalingMinSizeParameter"},
         "VPCZoneIdentifier": {"Ref": "SubnetsParameter"},
-    		"Tags": [{
-					"Key": "Name",
-					"Value": {
-						"Ref":"AWS::StackName"
-					},
-					"PropagateAtLaunch": true
-				}]
+    	"Tags": [{
+		"Key": "Name",
+		"Value": {
+			"Ref":"AWS::StackName"
+		},
+		"PropagateAtLaunch": true
+	}]
       },
       "CreationPolicy": {
         "ResourceSignal": {
@@ -433,11 +433,11 @@
         "AssociatePublicIpAddress": true,
         "EbsOptimized": false,
         "BlockDeviceMappings": [{
-    			"DeviceName": "/dev/sda1",
-    			"Ebs": {
-    				"VolumeSize": 8
-    			}
-    		}],
+	    	"DeviceName": "/dev/sda1",
+	    	"Ebs": {
+    			"VolumeSize": 8
+	    	}
+    	}],
         "IamInstanceProfile": {"Ref": "ScanInstanceProfile"},
         "ImageId": {"Fn::FindInMap": ["RegionMap", {"Ref": "AWS::Region"}, "AMI"]},
         "InstanceType": {"Ref": "InstanceTypeParameter"},
