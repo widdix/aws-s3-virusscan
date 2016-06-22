@@ -25,7 +25,8 @@
     "InstanceTypeParameter": {
       "Description": "Specifies the instance type of the EC2 instance",
       "Type": "String",
-      "Default": "t2.micro"
+      "Default": "t2.micro",
+      "AllowedValues": ["t2.nano", "t2.micro", "t2.small", "t2.medium", "t2.large", "m3.medium", "m3.large", "m3.xlarge", "m3.2xlarge", "m4.large", "m4.xlarge", "m4.2xlarge", "m4.4xlarge", "m4.10xlarge"]
     },
     "KeyNameParameter": {
       "Description": "Provide an EC2 key pair if you want to login via SSH",
