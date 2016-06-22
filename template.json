@@ -36,6 +36,13 @@
       "Type": "String",
       "Default": "true",
       "AllowedValues": ["true", "false"]
+    },
+    "BlockDeviceMappingsParameter": {
+      "Description": "The size of the volume, in gibibytes (GiBs).",
+      "Type": "Number",
+      "Default": "8",
+      "MinValue": "8",
+      "MaxValue": "512"
     }
   },
   "Conditions": {
@@ -156,13 +163,11 @@
         "MaxSize": {"Ref": "AutoScalingMaxSizeParameter"},
         "MinSize": {"Ref": "AutoScalingMinSizeParameter"},
         "VPCZoneIdentifier": {"Ref": "SubnetsParameter"},
-    	"Tags": [{
-		"Key": "Name",
-		"Value": {
-			"Ref":"AWS::StackName"
-		},
-		"PropagateAtLaunch": true
-	}]
+        "Tags": [{
+          "Key": "Name",
+          "Value": {"Ref":"AWS::StackName"},
+          "PropagateAtLaunch": true
+        }]
       },
       "CreationPolicy": {
         "ResourceSignal": {
@@ -433,11 +438,12 @@
         "AssociatePublicIpAddress": true,
         "EbsOptimized": false,
         "BlockDeviceMappings": [{
-	    	"DeviceName": "/dev/sda1",
-	    	"Ebs": {
-    			"VolumeSize": 8
-	    	}
-    	}],
+          "DeviceName": "/dev/sda1",
+          "Ebs": {
+            "VolumeSize": {"Ref": "BlockDeviceMappingsParameter"},
+            "VolumeType": "gp2"
+          }
+        }],
         "IamInstanceProfile": {"Ref": "ScanInstanceProfile"},
         "ImageId": {"Fn::FindInMap": ["RegionMap", {"Ref": "AWS::Region"}, "AMI"]},
         "InstanceType": {"Ref": "InstanceTypeParameter"},
