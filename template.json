@@ -1,6 +1,6 @@
 {
   "AWSTemplateFormatVersion": "2010-09-09",
-  "Description": "S3 VirusScan",
+  "Description": "S3 VirusScan ( https://cloudonaut.io/s3-virusscan-aws-security/ )",
   "Parameters": {
     "AutoScalingMinSizeParameter": {
       "Description": "Min Size for Auto Scaling",
@@ -438,7 +438,7 @@
         "AssociatePublicIpAddress": true,
         "EbsOptimized": false,
         "BlockDeviceMappings": [{
-          "DeviceName": "/dev/sda1",
+          "DeviceName": "/dev/xvda",
           "Ebs": {
             "VolumeSize": {"Ref": "BlockDeviceMappingsParameter"},
             "VolumeType": "gp2"
