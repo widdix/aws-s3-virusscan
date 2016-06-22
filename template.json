@@ -155,7 +155,14 @@
         "LaunchConfigurationName": {"Ref": "ScanLaunchConfiguration"},
         "MaxSize": {"Ref": "AutoScalingMaxSizeParameter"},
         "MinSize": {"Ref": "AutoScalingMinSizeParameter"},
-        "VPCZoneIdentifier": {"Ref": "SubnetsParameter"}
+        "VPCZoneIdentifier": {"Ref": "SubnetsParameter"},
+    	"Tags": [{
+		"Key": "Name",
+		"Value": {
+			"Ref":"AWS::StackName"
+		},
+		"PropagateAtLaunch": true
+	}]
       },
       "CreationPolicy": {
         "ResourceSignal": {
@@ -425,6 +432,12 @@
         "KeyName": {"Fn::If": ["HasKeyNameParameter", {"Ref": "KeyNameParameter"}, {"Ref": "AWS::NoValue"}]},
         "AssociatePublicIpAddress": true,
         "EbsOptimized": false,
+        "BlockDeviceMappings": [{
+	    	"DeviceName": "/dev/sda1",
+	    	"Ebs": {
+    			"VolumeSize": 8
+	    	}
+    	}],
         "IamInstanceProfile": {"Ref": "ScanInstanceProfile"},
         "ImageId": {"Fn::FindInMap": ["RegionMap", {"Ref": "AWS::Region"}, "AMI"]},
         "InstanceType": {"Ref": "InstanceTypeParameter"},
