@@ -3,10 +3,10 @@
   "Description": "S3 VirusScan",
   "Parameters": {
     "AutoScalingMinSizeParameter": {
-      "Description": "Min Size for Auto Scaling (if 0, S3 VirusScan scales down entirely to 0 EC2 instances!)",
+      "Description": "Min Size for Auto Scaling",
       "Type": "Number",
       "Default": "1",
-      "MinValue": "0"
+      "MinValue": "1"
     },
     "AutoScalingMaxSizeParameter": {
       "Description": "Max Size for Auto Scaling",
@@ -158,7 +158,7 @@
     "ScanAutoScalingGroup": {
       "Type": "AWS::AutoScaling::AutoScalingGroup",
       "Properties": {
-        "DesiredCapacity": "1",
+        "DesiredCapacity": {"Ref": "AutoScalingMinSizeParameter"},
         "LaunchConfigurationName": {"Ref": "ScanLaunchConfiguration"},
         "MaxSize": {"Ref": "AutoScalingMaxSizeParameter"},
         "MinSize": {"Ref": "AutoScalingMinSizeParameter"},
