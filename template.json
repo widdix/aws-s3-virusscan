@@ -302,7 +302,7 @@
               }
             },
             "sources": {
-              "/opt": "https://github.com/cmilam87/aws-s3-virusscan/archive/master.zip"
+              "/opt": "https://github.com/widdix/aws-s3-virusscan/archive/master.zip"
             },
             "files": {
               "/etc/awslogs/awslogs.conf": {
