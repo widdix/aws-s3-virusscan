@@ -528,7 +528,7 @@
           "ToPort": 22
         }],
         "VpcId": {"Ref": "VPCParameter"}
-	  }
-	}
+      }
+    }
   }
 }
