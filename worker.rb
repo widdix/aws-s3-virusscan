@@ -25,9 +25,9 @@ poller.poll(max_number_of_messages:10) do |messages|
       body['Records'].each do |record|
         bucket = record['s3']['bucket']['name']
         key = URI.decode(record['s3']['object']['key']).gsub('+', ' ')
-	    Thread.new {
-	      fileName = "/tmp/#{SecureRandom.uuid}"
-	  	  log.debug "scanning s3://#{bucket}/#{key}..."
+        Thread.new {
+          fileName = "/tmp/#{SecureRandom.uuid}"
+          log.debug "scanning s3://#{bucket}/#{key}..."
           begin
             s3.get_object(
               response_target: fileName,
@@ -39,12 +39,12 @@ poller.poll(max_number_of_messages:10) do |messages|
             next
           end
     
-	  	  if system("clamdscan #{fileName}")
-	  	    log.debug "s3://#{bucket}/#{key} was scanned without findings"
-	  	  else
-	  	    delete = conf['delete']
-	  	    message = "s3://#{bucket}/#{key} is infected#{delete ? ", deleting..." : ""}"
-	  	    sns.publish(
+          if system("clamdscan #{fileName}")
+            log.debug "s3://#{bucket}/#{key} was scanned without findings"
+          else
+            delete = conf['delete']
+            message = "s3://#{bucket}/#{key} is infected#{delete ? ", deleting..." : ""}"
+            sns.publish(
               topic_arn: conf['topic'],
               message: message,
               subject: "s3-virusscan s3://#{bucket}",
@@ -55,16 +55,16 @@ poller.poll(max_number_of_messages:10) do |messages|
                 }
               }
             )
-	  	    if delete
-	  		  s3.delete_object(
+            if delete
+              s3.delete_object(
                 bucket: bucket,
                 key: key
               )
               log.error "s3://#{bucket}/#{key} was deleted"
-	  	    end
-	  	  end
-	  	  system("rm #{fileName}")
-	    }
+            end
+          end
+          system("rm #{fileName}")
+        }
       end
     end
   end
