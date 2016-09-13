@@ -513,21 +513,21 @@
         ]]}}
       }
     },
-	"ScanSecurityGroup": {
-	  "Type": "AWS::EC2::SecurityGroup",
-	  "Properties": {
-	    "GroupDescription": "S3 VirusScan",
-	    "SecurityGroupEgress": [{
-	      "IpProtocol": "-1",
-	      "CidrIp": "0.0.0.0/0"
-	    }],
-	    "SecurityGroupIngress": [{
-	      "CidrIp": "0.0.0.0/0",
-	      "FromPort": 22,
-	      "IpProtocol": "tcp",
-	      "ToPort": 22
-	    }],
-	    "VpcId": {"Ref": "VPCParameter"}
+    "ScanSecurityGroup": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "GroupDescription": "S3 VirusScan",
+        "SecurityGroupEgress": [{
+          "IpProtocol": "-1",
+          "CidrIp": "0.0.0.0/0"
+        }],
+        "SecurityGroupIngress": [{
+          "CidrIp": "0.0.0.0/0",
+          "FromPort": 22,
+          "IpProtocol": "tcp",
+          "ToPort": 22
+        }],
+        "VpcId": {"Ref": "VPCParameter"}
 	  }
 	}
   }
