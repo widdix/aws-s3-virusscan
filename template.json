@@ -81,7 +81,7 @@
   },
   "Conditions": {
     "HasKeyNameParameter": {"Fn::Not": [{"Fn::Equals": ["", {"Ref": "KeyNameParameter"}]}]},
-	"HasNATHostGateway": {"Fn::And": [{"Fn::Not": [{"Fn::Equals": ["", {"Ref": "NATSecurityGroupParameter"}]}]},{"Fn::Not": [{"Fn::Equals": ["true", {"Ref": "AssignPublicIPParameter"}]}]}]}
+    "HasNATHostGateway": {"Fn::And": [{"Fn::Not": [{"Fn::Equals": ["", {"Ref": "NATSecurityGroupParameter"}]}]},{"Fn::Not": [{"Fn::Equals": ["true", {"Ref": "AssignPublicIPParameter"}]}]}]}
   },
   "Mappings": {
     "RegionMap": {
@@ -328,7 +328,7 @@
               "rubygems": {
                 "aws-sdk": ["2.2.29"],
                 "daemons": ["1.2.3"],
-				"rubysl-securerandom": ["2.0.0"]
+                "rubysl-securerandom": ["2.0.0"]
               }
             },
             "sources": {
@@ -415,10 +415,10 @@
                   "runas=root", "\n"
                 ]]}
               },
-			  "/etc/clamd.conf": {
-				"content": {"Fn::Join": ["", [
-				  "LocalSocket /var/run/clamd.scan/clamd.sock"
-				]]},
+              "/etc/clamd.conf": {
+                "content": {"Fn::Join": ["", [
+                  "LocalSocket /var/run/clamd.scan/clamd.sock"
+                ]]},
                 "mode": "000644",
                 "owner": "root",
                 "group": "root"
@@ -431,9 +431,9 @@
               "b_enable_freshclam": {
                 "command": "sed -i 's/Example/#Example/g' /etc/freshclam.conf"
               },
-			  "c_enable_clamd_scan": {
-			    "command": "sed -i 's/Example/#Example/g;s/#LocalSocket /LocalSocket /g' /etc/clamd.d/scan.conf"
-			  },
+              "c_enable_clamd_scan": {
+                "command": "sed -i 's/Example/#Example/g;s/#LocalSocket /LocalSocket /g' /etc/clamd.d/scan.conf"
+              },
               "d_symlink_app_dir": {
                 "command": "ln -s /opt/aws-s3-virusscan-master /opt/aws-s3-virusscan",
                 "test": "test ! -e /opt/aws-s3-virusscan"
@@ -450,10 +450,10 @@
                 "command": "chmod +x s3-virusscan",
                 "cwd": "/opt/aws-s3-virusscan"
               },
-			  "h_chmod_clamd_reload": {
-			    "command": "chmod +x clamd-reload.sh",
+              "h_chmod_clamd_reload": {
+                "command": "chmod +x clamd-reload.sh",
                 "cwd": "/opt/aws-s3-virusscan"
-			  },
+              },
               "i_update_clamav_db": {
                 "command": "freshclam"
               }
@@ -479,13 +479,13 @@
                   "files": ["/opt/aws-s3-virusscan-master/s3-virusscan.conf"],
                   "sources": ["/opt"]
                 },
-				"clamd.scan": {
-				  "enabled": "true",
-				  "ensureRunning": "true",
-				  "packages": {
-					"yum": ["clamd"]
-				  }
-				}
+                "clamd.scan": {
+                  "enabled": "true",
+                  "ensureRunning": "true",
+                  "packages": {
+                    "yum": ["clamd"]
+                  }
+                }
               }
             }
           }
@@ -494,7 +494,7 @@
       "Properties": {
         "KeyName": {"Fn::If": ["HasKeyNameParameter", {"Ref": "KeyNameParameter"}, {"Ref": "AWS::NoValue"}]},
         "EbsOptimized": false,
-		"AssociatePublicIpAddress": { "Ref":"AssignPublicIPParameter" },
+        "AssociatePublicIpAddress": { "Ref":"AssignPublicIPParameter" },
         "BlockDeviceMappings": [{
           "DeviceName": "/dev/xvda",
           "Ebs": {
