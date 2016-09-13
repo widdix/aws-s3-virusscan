@@ -22,17 +22,17 @@
       "Description": "A list of subnets (should be either public or using a S3 VPC endpoint)",
       "Type": "List<AWS::EC2::Subnet::Id>"
     },
-	"AssignPublicIPParameter": {
-	  "Description": "Assign a public IP to instances. If this is set to false, ensure your instances have access to the internet through a NAT Host/Gateway.",
-	  "Type": "String",
-	  "Default": "true",
-	  "AllowedValues": ["true", "false"]
-	},
-	"NATSecurityGroupParameter": {
-		"Description": "If AssignPublicIP is set to false, select the security group that your NAT Host or Gateway is in (usually named 'Default'), otherwise the instances won't be able to reach the internet. If AssignPublicIP is set to true, this parameter is ignored.",
-		"Type": "AWS::EC2::SecurityGroup::Id",
-		"Default": "AWS::NoValue"
-	},
+    "AssignPublicIPParameter": {
+      "Description": "Assign a public IP to instances. If this is set to false, ensure your instances have access to the internet through a NAT Host/Gateway.",
+      "Type": "String",
+      "Default": "true",
+      "AllowedValues": ["true", "false"]
+    },
+    "NATSecurityGroupParameter": {
+        "Description": "If AssignPublicIP is set to false, select the security group that your NAT Host or Gateway is in (usually named 'Default'), otherwise the instances won't be able to reach the internet. If AssignPublicIP is set to true, this parameter is ignored.",
+        "Type": "AWS::EC2::SecurityGroup::Id",
+        "Default": "AWS::NoValue"
+    },
     "InstanceTypeParameter": {
       "Description": "Specifies the instance type of the EC2 instance",
       "Type": "String",
@@ -58,26 +58,26 @@
     }
   },
   "Metadata": {
-	"AWS::CloudFormation::Interface": {
-	  "ParameterGroups": [
-	    {
-		  "Label": {"default": "Instance Configuration"},
-		  "Parameters": ["InstanceTypeParameter", "BlockDeviceMappingsParameter", "KeyNameParameter"]
-		},
-	    {
-		  "Label": {"default": "Network Configuration"},
-		  "Parameters": ["VPCParameter", "SubnetsParameter", "AssignPublicIPParameter", "NATSecurityGroupParameter"]
-		},
-	    {
-		  "Label": {"default": "Auto-scaling Configuration"},
-		  "Parameters": ["AutoScalingMinSizeParameter", "AutoScalingMaxSizeParameter"]
-		},
-		{
-		  "Label": {"default": "ClamAV Configuration"},
-		  "Parameters": ["DeleteInfectedFilesParameter"]
-		}
-	  ]
-	}
+    "AWS::CloudFormation::Interface": {
+      "ParameterGroups": [
+        {
+          "Label": {"default": "Instance Configuration"},
+          "Parameters": ["InstanceTypeParameter", "BlockDeviceMappingsParameter", "KeyNameParameter"]
+        },
+        {
+          "Label": {"default": "Network Configuration"},
+          "Parameters": ["VPCParameter", "SubnetsParameter", "AssignPublicIPParameter", "NATSecurityGroupParameter"]
+        },
+        {
+          "Label": {"default": "Auto-scaling Configuration"},
+          "Parameters": ["AutoScalingMinSizeParameter", "AutoScalingMaxSizeParameter"]
+        },
+        {
+          "Label": {"default": "ClamAV Configuration"},
+          "Parameters": ["DeleteInfectedFilesParameter"]
+        }
+      ]
+    }
   },
   "Conditions": {
     "HasKeyNameParameter": {"Fn::Not": [{"Fn::Equals": ["", {"Ref": "KeyNameParameter"}]}]},
@@ -422,7 +422,7 @@
                 "mode": "000644",
                 "owner": "root",
                 "group": "root"
-			  }
+              }
             },
             "commands": {
               "a_enable_freshclam_cron": {
