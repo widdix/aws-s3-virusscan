@@ -36,6 +36,23 @@ poller.poll do |msg|
       end
       if system('clamscan /tmp/target')
         log.debug "s3://#{bucket}/#{key} was scanned without findings"
+        if conf['reportClean']
+          sns.publish(
+            topic_arn: conf['topic'],
+            message: "s3://#{bucket}/#{key} is clean",
+            subject: "s3-virusscan s3://#{bucket}",
+            message_attributes: {
+              "key" => {
+                data_type: "String",
+                string_value: "s3://#{bucket}/#{key}"
+              },
+              "status" => {
+                data_type: "String",
+                string_value: "clean"
+              }
+            }
+          )
+        end
       else
         if conf['delete']
           log.error "s3://#{bucket}/#{key} is infected, deleting..."
@@ -47,6 +64,10 @@ poller.poll do |msg|
               "key" => {
                 data_type: "String",
                 string_value: "s3://#{bucket}/#{key}"
+              },
+              "status" => {
+                data_type: "String",
+                string_value: "infected"
               }
             }
           )
@@ -65,6 +86,10 @@ poller.poll do |msg|
               "key" => {
                 data_type: "String",
                 string_value: "s3://#{bucket}/#{key}"
+              },
+              "status" => {
+                data_type: "String",
+                string_value: "infected"
               }
             }
           )
