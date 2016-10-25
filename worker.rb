@@ -38,7 +38,7 @@ poller.poll do |msg|
       end
       if system('clamscan /tmp/target')
         if conf['reportClean']
-          publish_notification(""s3://#{bucket}/#{key} is clean",clean_status);
+          publish_notification("s3://#{bucket}/#{key} is clean",clean_status);
         else
           # log only, no notification
           log.info "s3://#{bucket}/#{key} is clean"
