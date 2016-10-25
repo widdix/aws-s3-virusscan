@@ -28,16 +28,6 @@
       "Default": "t2.micro",
       "AllowedValues": ["t2.nano", "t2.micro", "t2.small", "t2.medium", "t2.large", "m3.medium", "m3.large", "m3.xlarge", "m3.2xlarge", "m4.large", "m4.xlarge", "m4.2xlarge", "m4.4xlarge", "m4.10xlarge"]
     },
-    "KeyNameParameter": {
-      "Description": "Provide an EC2 key pair if you want to login via SSH",
-      "Type": "AWS::EC2::KeyPair::KeyName"
-    },
-    "DeleteInfectedFilesParameter": {
-      "Description": "Automatically delete infected files",
-      "Type": "String",
-      "Default": "true",
-      "AllowedValues": ["true", "false"]
-    },
     "BlockDeviceMappingsParameter": {
       "Description": "The size of the volume, in gibibytes (GiBs).",
       "Type": "Number",
@@ -45,9 +35,6 @@
       "MinValue": "8",
       "MaxValue": "512"
     }
-  },
-  "Conditions": {
-    "HasKeyNameParameter": {"Fn::Not": [{"Fn::Equals": ["", {"Ref": "KeyNameParameter"}]}]}
   },
   "Mappings": {
     "RegionMap": {
@@ -224,8 +211,7 @@
             "Statement": [{
               "Effect": "Allow",
               "Action": [
-                "s3:GetObject*",
-                "s3:DeleteObject*"
+                "s3:GetObject*"
               ],
               "Resource": [
                 "*"
@@ -299,7 +285,7 @@
               }
             },
             "sources": {
-              "/opt": "https://github.com/widdix/aws-s3-virusscan/archive/master.zip"
+              "/opt": "https://github.com/mdyd-dev/aws-s3-virusscan/archive/master.zip"
             },
             "files": {
               "/etc/awslogs/awslogs.conf": {
@@ -354,7 +340,7 @@
               },
               "/opt/aws-s3-virusscan-master/s3-virusscan.conf": {
                 "content": {"Fn::Join": ["", [
-                  "delete: ", {"Ref": "DeleteInfectedFilesParameter"}, "\n",
+                  "delete: false\n",
                   "region: ", {"Ref": "AWS::Region"}, "\n",
                   "queue: ", {"Ref": "ScanQueue"}, "\n",
                   "topic: ", {"Ref": "FindingsTopic"}, "\n"
@@ -437,7 +423,6 @@
         }
       },
       "Properties": {
-        "KeyName": {"Fn::If": ["HasKeyNameParameter", {"Ref": "KeyNameParameter"}, {"Ref": "AWS::NoValue"}]},
         "AssociatePublicIpAddress": true,
         "EbsOptimized": false,
         "BlockDeviceMappings": [{
@@ -465,12 +450,6 @@
         "SecurityGroupEgress": [{
           "IpProtocol": "-1",
           "CidrIp": "0.0.0.0/0"
-        }],
-        "SecurityGroupIngress": [{
-          "CidrIp": "0.0.0.0/0",
-          "FromPort": 22,
-          "IpProtocol": "tcp",
-          "ToPort": 22
         }],
         "VpcId": {"Ref": "VPCParameter"}
       }
