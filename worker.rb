@@ -19,6 +19,26 @@ infected_status = 'infected';
 
 log.info "s3-virusscan started"
 
+def publish_notification(msg,status)
+  log.info msg
+  sns = Aws::SNS::Client.new()
+  sns.publish(
+    topic_arn: conf['topic'],
+    message: msg,
+    subject: "s3-virusscan s3://#{bucket}",
+    message_attributes: {
+      "key" => {
+        data_type: "String",
+        string_value: "s3://#{bucket}/#{key}"
+      },
+      "status" => {
+        data_type: "String",
+        string_value: status
+      }
+    }
+  )
+end
+
 poller.poll do |msg|
   body = JSON.parse(msg.body)
   if body.key?('Records')
@@ -60,22 +80,3 @@ poller.poll do |msg|
   end
 end
 
-def publish_notification(msg,status)
-  log.info msg
-  sns = Aws::SNS::Client.new()
-  sns.publish(
-    topic_arn: conf['topic'],
-    message: msg,
-    subject: "s3-virusscan s3://#{bucket}",
-    message_attributes: {
-      "key" => {
-        data_type: "String",
-        string_value: "s3://#{bucket}/#{key}"
-      },
-      "status" => {
-        data_type: "String",
-        string_value: status
-      }
-    }
-  )
-end
