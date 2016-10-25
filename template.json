@@ -359,7 +359,7 @@
               "/opt/aws-s3-virusscan-master/s3-virusscan.conf": {
                 "content": {"Fn::Join": ["", [
                   "delete: ", {"Ref": "DeleteInfectedFilesParameter"}, "\n",
-                  "reportClean: ", {"Ref": "ReportCleanFilesParameter"}, "\n",
+                  "report_clean: ", {"Ref": "ReportCleanFilesParameter"}, "\n",
                   "region: ", {"Ref": "AWS::Region"}, "\n",
                   "queue: ", {"Ref": "ScanQueue"}, "\n",
                   "topic: ", {"Ref": "FindingsTopic"}, "\n"
