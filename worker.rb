@@ -11,9 +11,11 @@ conf = YAML::load_file(__dir__ + '/s3-virusscan.conf')
 
 Aws.config.update(region: conf['region'])
 s3 = Aws::S3::Client.new()
-sns = Aws::SNS::Client.new()
 
 poller = Aws::SQS::QueuePoller.new(conf['queue'])
+
+clean_status = 'clean';
+infected_status = 'infected';
 
 log.info "s3-virusscan started"
 
@@ -31,68 +33,26 @@ poller.poll do |msg|
           key: key
         )
       rescue Aws::S3::Errors::NoSuchKey
-        log.debug "s3://#{bucket}/#{key} does no longer exist"
+        log.error "s3://#{bucket}/#{key} does no longer exist"
         next
       end
       if system('clamscan /tmp/target')
-        log.debug "s3://#{bucket}/#{key} was scanned without findings"
         if conf['reportClean']
-          sns.publish(
-            topic_arn: conf['topic'],
-            message: "s3://#{bucket}/#{key} is clean",
-            subject: "s3-virusscan s3://#{bucket}",
-            message_attributes: {
-              "key" => {
-                data_type: "String",
-                string_value: "s3://#{bucket}/#{key}"
-              },
-              "status" => {
-                data_type: "String",
-                string_value: "clean"
-              }
-            }
-          )
+          publish_notification(""s3://#{bucket}/#{key} is clean",clean_status);
+        else
+          # log only, no notification
+          log.info "s3://#{bucket}/#{key} is clean"
         end
       else
         if conf['delete']
-          log.error "s3://#{bucket}/#{key} is infected, deleting..."
-          sns.publish(
-            topic_arn: conf['topic'],
-            message: "s3://#{bucket}/#{key} is infected, deleting...",
-            subject: "s3-virusscan s3://#{bucket}",
-            message_attributes: {
-              "key" => {
-                data_type: "String",
-                string_value: "s3://#{bucket}/#{key}"
-              },
-              "status" => {
-                data_type: "String",
-                string_value: "infected"
-              }
-            }
-          )
+          publish_notification("s3://#{bucket}/#{key} is infected, deleting...",infected_status);
           s3.delete_object(
             bucket: bucket,
             key: key
           )
-          log.error "s3://#{bucket}/#{key} was deleted"
+          log.info "s3://#{bucket}/#{key} was deleted"
         else
-          log.error "s3://#{bucket}/#{key} is infected"
-          sns.publish(
-            topic_arn: conf['topic'],
-            message: "s3://#{bucket}/#{key} is infected",
-            subject: "s3-virusscan s3://#{bucket}",
-            message_attributes: {
-              "key" => {
-                data_type: "String",
-                string_value: "s3://#{bucket}/#{key}"
-              },
-              "status" => {
-                data_type: "String",
-                string_value: "infected"
-              }
-            }
-          )
+          publish_notification("s3://#{bucket}/#{key} is infected",infected_status);
         end
       end
       system('rm /tmp/target')
@@ -100,3 +60,22 @@ poller.poll do |msg|
   end
 end
 
+def publish_notification(msg,status)
+  log.info msg
+  sns = Aws::SNS::Client.new()
+  sns.publish(
+    topic_arn: conf['topic'],
+    message: msg,
+    subject: "s3-virusscan s3://#{bucket}",
+    message_attributes: {
+      "key" => {
+        data_type: "String",
+        string_value: "s3://#{bucket}/#{key}"
+      },
+      "status" => {
+        data_type: "String",
+        string_value: status
+      }
+    }
+  )
+end
