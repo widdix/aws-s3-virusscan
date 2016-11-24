@@ -5,7 +5,7 @@ require 'json'
 require 'uri'
 require 'yaml'
 require 'syslog/logger'
-
+require 'securerandom'
 
 class ClamScanWorker
 
@@ -33,35 +33,38 @@ class ClamScanWorker
         body['Records'].each do |record|
           bucket = record['s3']['bucket']['name']
           key = URI.decode(record['s3']['object']['key']).gsub('+', ' ')
-          log.debug "scanning s3://#{bucket}/#{key}..."
-          begin
-            s3.get_object(
-              response_target: '/tmp/target',
-              bucket: bucket,
-              key: key
-            )
-          rescue Aws::S3::Errors::NoSuchKey
-            log.error "s3://#{bucket}/#{key} does no longer exist"
-            next
-          end
-          if system('clamscan /tmp/target')
-            if conf['report_clean']
-              publish_notification(bucket,key,CLEAN_STATUS);
-            else
-              # log only, no notification
-              log.info "s3://#{bucket}/#{key} is clean"
-            end
-          else
-            publish_notification(bucket,key,INFECTED_STATUS);
-            if conf['delete']
-              s3.delete_object(
+          Thread.new {
+            fileName = "/tmp/#{SecureRandom.uuid}"
+            log.debug "scanning s3://#{bucket}/#{key}..."
+            begin
+              s3.get_object(
+                response_target: fileName,
                 bucket: bucket,
                 key: key
               )
-              log.info "s3://#{bucket}/#{key} was deleted"
+            rescue Aws::S3::Errors::NoSuchKey
+              log.debug "s3://#{bucket}/#{key} does no longer exist"
+              next
             end
-          end
-          system('rm /tmp/target')
+
+            if system("clamdscan #{fileName}")
+              if conf['report_clean']
+                publish_notification(bucket, key, CLEAN_STATUS);
+              else
+                log.debug "s3://#{bucket}/#{key} is clean"
+              end
+            else
+              publish_notification(bucket, key, INFECTED_STATUS);
+              if conf['delete']
+                s3.delete_object(
+                  bucket: bucket,
+                  key: key
+                )
+                log.debug "s3://#{bucket}/#{key} was deleted"
+              end
+            end
+            system("rm #{fileName}")
+          }
         end
       end
     end
@@ -69,12 +72,12 @@ class ClamScanWorker
 
   private
 
-  def publish_notification(bucket,key,status)
+  def publish_notification(bucket, key, status)
     msg = "s3://#{bucket}/#{key} is #{status}"
     if conf['delete']
       msg << ", deleting..."
     end
-    log.info msg
+    log.debug msg
     sns.publish(
       topic_arn: conf['topic'],
       message: msg,

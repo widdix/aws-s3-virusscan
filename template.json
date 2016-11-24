@@ -1,6 +1,6 @@
 {
   "AWSTemplateFormatVersion": "2010-09-09",
-  "Description": "S3 VirusScan ( https://cloudonaut.io/s3-virusscan-aws-security/ )",
+  "Description": "S3 VirusScan ( https://github.com/widdix/aws-s3-virusscan/ )",
   "Parameters": {
     "AutoScalingMinSizeParameter": {
       "Description": "Min Size for Auto Scaling",
@@ -301,7 +301,8 @@
               },
               "rubygems": {
                 "aws-sdk": ["2.2.29"],
-                "daemons": ["1.2.3"]
+                "daemons": ["1.2.3"],
+                "rubysl-securerandom": ["2.0.0"]
               }
             },
             "sources": {
@@ -388,6 +389,14 @@
                   "action=/opt/aws/bin/cfn-init --verbose --stack=", {"Ref": "AWS::StackName"}, " --region=", {"Ref": "AWS::Region"}, " --resource=ScanLaunchConfiguration", "\n",
                   "runas=root", "\n"
                 ]]}
+              },
+              "/etc/clamd.conf": {
+                "content": {"Fn::Join": ["", [
+                  "LocalSocket /var/run/clamd.scan/clamd.sock"
+                ]]},
+                "mode": "000644",
+                "owner": "root",
+                "group": "root"
               }
             },
             "commands": {
@@ -397,23 +406,30 @@
               "b_enable_freshclam": {
                 "command": "sed -i 's/Example/#Example/g' /etc/freshclam.conf"
               },
-              "c_symlink_app_dir": {
+              "c_enable_clamd_scan": {
+                "command": "sed -i 's/Example/#Example/g;s/#LocalSocket /LocalSocket /g' /etc/clamd.d/scan.conf"
+              },
+              "d_symlink_app_dir": {
                 "command": "ln -s /opt/aws-s3-virusscan-master /opt/aws-s3-virusscan",
                 "test": "test ! -e /opt/aws-s3-virusscan"
               },
-              "d_symlink_app_initd": {
+              "e_symlink_app_initd": {
                 "command": "ln -s /opt/aws-s3-virusscan/s3-virusscan /etc/init.d/s3-virusscan",
                 "test": "test ! -e /etc/init.d/s3-virusscan"
               },
-              "e_chmod_app_ruby": {
+              "f_chmod_app_ruby": {
                 "command": "chmod +x *.rb",
                 "cwd": "/opt/aws-s3-virusscan"
               },
-              "f_chmod_app_initd": {
+              "g_chmod_app_initd": {
                 "command": "chmod +x s3-virusscan",
                 "cwd": "/opt/aws-s3-virusscan"
               },
-              "g_update_clamav_db": {
+              "h_chmod_clamd_reload": {
+                "command": "chmod +x clamd-reload.sh",
+                "cwd": "/opt/aws-s3-virusscan"
+              },
+              "i_update_clamav_db": {
                 "command": "freshclam"
               }
             },
@@ -437,6 +453,13 @@
                   "ensureRunning": "true",
                   "files": ["/opt/aws-s3-virusscan-master/s3-virusscan.conf"],
                   "sources": ["/opt"]
+                },
+                "clamd.scan": {
+                  "enabled": "true",
+                  "ensureRunning": "true",
+                  "packages": {
+                    "yum": ["clamd"]
+                  }
                 }
               }
             }
@@ -445,8 +468,8 @@
       },
       "Properties": {
         "KeyName": {"Fn::If": ["HasKeyNameParameter", {"Ref": "KeyNameParameter"}, {"Ref": "AWS::NoValue"}]},
-        "AssociatePublicIpAddress": true,
         "EbsOptimized": false,
+        "AssociatePublicIpAddress": true,
         "BlockDeviceMappings": [{
           "DeviceName": "/dev/xvda",
           "Ebs": {
