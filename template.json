@@ -468,8 +468,8 @@
       },
       "Properties": {
         "KeyName": {"Fn::If": ["HasKeyNameParameter", {"Ref": "KeyNameParameter"}, {"Ref": "AWS::NoValue"}]},
-        "EbsOptimized": false,
         "AssociatePublicIpAddress": true,
+        "EbsOptimized": false,
         "BlockDeviceMappings": [{
           "DeviceName": "/dev/xvda",
           "Ebs": {
