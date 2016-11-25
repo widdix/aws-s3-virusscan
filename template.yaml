@@ -564,6 +564,15 @@ Resources:
               mode: '000644'
               owner: root
               group: root
+            '/etc/awslogs/awscli.conf':
+              content: !Sub |
+                [default]
+                region = ${AWS::Region}
+                [plugins]
+                cwlogs = cwlogs
+              mode: '000644'
+              owner: root
+              group: root
             '/etc/awslogs/awslogs.conf':
               content: !Sub |
                 [general]
@@ -658,6 +667,7 @@ Resources:
                   - awslogs
                 files:
                 - '/etc/awslogs/awslogs.conf'
+                - '/etc/awslogs/awscli.conf'
               's3-virusscan':
                 enabled: true
                 ensureRunning: true
