@@ -54,11 +54,13 @@ Parameters:
     Description: 'Min Size for Auto Scaling'
     Type: Number
     Default: 1
+    ConstraintDescription: 'Must be >= 1'
     MinValue: 1
   AutoScalingMaxSize:
     Description: 'Max Size for Auto Scaling'
     Type: Number
     Default: 1
+    ConstraintDescription: 'Must be >= 1'
     MinValue: 1
   KeyName:
     Description: 'Optional provide an EC2 key pair if you want to login via SSH'
@@ -83,8 +85,9 @@ Parameters:
     Description: The size of the volume, in gibibytes (GiBs).
     Type: Number
     Default: 8
+    ConstraintDescription: 'Must be in the range [8-1024]'
     MinValue: 8
-    MaxValue: 512
+    MaxValue: 1024
   NewRelicLicenseKey:
     Description: 'Optional New Relic License Key will install the New Relic Servers for Linux agent.'
     Type: String

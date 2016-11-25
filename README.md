@@ -9,7 +9,7 @@ Antivirus for S3 buckets. You can connect as many buckets as you like by using [
 * Scales EC2 instance workers to distribute workload
 * Publishes a message to SNS in case of a finding
 * Can optionally delete compromised files automatically
-* Logs to CLoudWatch Logs
+* Logs to CloudWatch Logs
 
 ## How does it work
 
