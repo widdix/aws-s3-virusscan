@@ -196,7 +196,7 @@ Resources:
       Threshold: 1
       ComparisonOperator: GreaterThanOrEqualToThreshold
       AlarmActions:
-      - !Ref FindingsTopic  # TODO should be better a alarm topic of something
+      - !Ref FindingsTopic
   ScanAutoScalingGroup:
     Type: 'AWS::AutoScaling::AutoScalingGroup'
     Properties:
@@ -211,14 +211,13 @@ Resources:
       - Key: Name
         Value: !Ref 'AWS::StackName'
         PropagateAtLaunch: true
-    # TODO re-enable 
-    #CreationPolicy:
-    #  ResourceSignal:
-    #    Timeout: PT10M
-    #UpdatePolicy:
-    #  AutoScalingRollingUpdate:
-    #    PauseTime: PT10M
-    #    WaitOnResourceSignals: true
+    CreationPolicy:
+      ResourceSignal:
+        Timeout: PT10M
+    UpdatePolicy:
+      AutoScalingRollingUpdate:
+        PauseTime: PT10M
+        WaitOnResourceSignals: true
   ScanScaleUp:
     Type: 'AWS::AutoScaling::ScalingPolicy'
     Properties:
@@ -490,7 +489,7 @@ Resources:
 
                   def publish_notification(bucket, key, status)
                     msg = "s3://#{bucket}/#{key} is #{status}"
-                    if conf['delete']
+                    if status == INFECTED_STATUS and conf['delete']
                       msg << ", deleting..."
                     end
                     log.debug msg
@@ -693,11 +692,10 @@ Resources:
       SecurityGroups:
       - !Ref ScanSecurityGroup
       UserData:
-        # TODO $? instead of 0
         'Fn::Base64': !Sub |
           #!/bin/bash -x
           /opt/aws/bin/cfn-init -v --stack ${AWS::StackName} --resource ScanLaunchConfiguration --region ${AWS::Region}
-          /opt/aws/bin/cfn-signal -e 0 --stack ${AWS::StackName} --resource ScanAutoScalingGroup --region ${AWS::Region}
+          /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackName} --resource ScanAutoScalingGroup --region ${AWS::Region}
   ScanSecurityGroup:
     Type: 'AWS::EC2::SecurityGroup'
     Properties:
@@ -729,3 +727,23 @@ Outputs:
     Value: !GetAtt 'ScanQueue.Arn'
     Export:
       Name: !Sub '${AWS::StackName}-ScanQueueArn'
+  ScanQueueName:
+    Description: 'The name of the Scan Queue.'
+    Value: !GetAtt 'ScanQueue.QueueName'
+    Export:
+      Name: !Sub '${AWS::StackName}-ScanQueueName'
+  ScanQueueUrl:
+    Description: 'The URL of the Scan Queue.'
+    Value: !Ref ScanQueue
+    Export:
+      Name: !Sub '${AWS::StackName}-ScanQueueUrl'
+  FindingsTopicArn:
+    Description: 'The ARN of the Findings Topic.'
+    Value: !Ref FindingsTopic
+    Export:
+      Name: !Sub '${AWS::StackName}-FindingsTopicArn'
+  FindingsTopicName:
+    Description: 'The name of the Findings Topic.'
+    Value: !GetAtt 'FindingsTopic.TopicName'
+    Export:
+      Name: !Sub '${AWS::StackName}-FindingsTopicName'
