@@ -399,7 +399,6 @@ Resources:
           packages:
             yum:
               clamd: []
-              clamav: []
               clamav-update: []
               awslogs: []
             rubygems:
@@ -556,12 +555,6 @@ Resources:
               mode: '000755'
               owner: root
               group: root
-            '/etc/clamd.conf':
-              content: |
-                LocalSocket /var/run/clamd.scan/clamd.sock
-              mode: '000644'
-              owner: root
-              group: root
             '/etc/awslogs/awscli.conf':
               content: !Sub |
                 [default]
@@ -623,10 +616,6 @@ Resources:
                 file = /var/log/dmesg
                 log_stream_name = {instance_id}/var/log/dmesg
                 log_group_name = ${Logs}
-                [/var/log/freshclam.log]
-                file = /var/log/freshclam.log
-                log_stream_name = {instance_id}/var/log/freshclam.log
-                log_group_name = ${Logs}
               mode: '000644'
               owner: root
               group: root
@@ -648,12 +637,15 @@ Resources:
                 runas=root
           commands:
             a_enable_freshclam_cron:
-              command: 'sed -i "s/FRESHCLAM_DELAY/#FRESHCLAM_DELAY/g" /etc/sysconfig/freshclam'
+              command: 'sed -i "s/^FRESHCLAM_DELAY/#FRESHCLAM_DELAY/g" /etc/sysconfig/freshclam'
             b_enable_freshclam:
-              command: 'sed -i "s/Example/#Example/g" /etc/freshclam.conf'
+              command: 'sed -i "s/^Example/#Example/g" /etc/freshclam.conf'
             c_enable_clamd_scan:
-              command: 'sed -i "s/Example/#Example/g;s/#LocalSocket /LocalSocket /g" /etc/clamd.d/scan.conf'
-            d_update_clamav_db:
+              command: 'sed -i "s/^Example/#Example/g;s/^#LocalSocket /LocalSocket /g" /etc/clamd.d/scan.conf'
+            d_add_clamdscan_config:
+              command: 'ln -s /etc/clamd.d/scan.conf /etc/clamd.conf'
+              test: '[ ! -f /etc/clamd.conf ]'
+            e_update_clamav_db:
               command: freshclam
           services:
             sysvinit:
