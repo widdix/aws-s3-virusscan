@@ -5,8 +5,11 @@ Antivirus for S3 buckets. You can connect as many buckets as you like by using [
 ## Features
 
 * Uses ClamAV to scan newly added files on S3 buckets
-* Automatically updates ClamAV db every 3 hours
-* Scale EC2 instance workers to distribute workload
+* Updates ClamAV database every 3 hours automatically
+* Scales EC2 instance workers to distribute workload
+* Publishes a message to SNS in case of a finding
+* Can optionally delete compromised files automatically
+* Logs to CLoudWatch Logs
 
 ## How does it work
 

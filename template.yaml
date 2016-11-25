@@ -1,6 +1,6 @@
 ---
 AWSTemplateFormatVersion: '2010-09-09'
-Description: 'S3 VirusScan (https://github.com/widdix/aws-s3-virusscan/)'
+Description: 'Security: S3 VirusScan, a cloudonaut.io template'
 Metadata:
   'AWS::CloudFormation::Interface':
     ParameterGroups:
