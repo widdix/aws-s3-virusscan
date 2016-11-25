@@ -33,7 +33,7 @@ Parameters:
     Description: 'Stack name of parent VPC stack based on vpc/vpc-*azs.yaml template.'
     Type: String
   ParentSSHBastionStack:
-    Description: 'Optional Stack name of parent SSH bastion host/instance stack based on vpc/vpc-ssh-bastion.yaml template.'
+    Description: 'Optional stack name of parent SSH bastion host/instance stack based on vpc/vpc-ssh-bastion.yaml template.'
     Type: String
     Default: ''
   DeleteInfectedFiles:
@@ -61,7 +61,7 @@ Parameters:
     Default: 1
     MinValue: 1
   KeyName:
-    Description: 'Provide an EC2 key pair if you want to login via SSH'
+    Description: 'Optional provide an EC2 key pair if you want to login via SSH'
     Type: String
   IAMUserSSHAccess:
     Description: 'Synchronize public keys of IAM users to enable personalized SSH access (Doc: https://cloudonaut.io/manage-aws-ec2-ssh-access-with-iam/).'
