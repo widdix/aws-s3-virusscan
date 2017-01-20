@@ -61,7 +61,8 @@ X5O!P%@AP[4\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*
 
 and upload that file to your S3 bucket.
 
-## TODO
+## Known issues / limitations
 
-* Support versioned S3 buckets
-* An initial scan may also be useful. This could be implemented with a Lambda function that pushes every key to SQS.
+* It was [reported](https://github.com/widdix/aws-s3-virusscan/issues/12) that the solution does not run on a t2.micro or smaller. Use at least a t2.small instance.
+* Versioned buckets are not supported
+* An initial scan may also be useful but is not performed at the moment. This could be implemented with a Lambda function that pushes every key to SQS.

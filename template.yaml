@@ -75,7 +75,7 @@ Parameters:
   InstanceType:
     Description: 'Specifies the instance type of the EC2 instance'
     Type: String
-    Default: 't2.micro'
+    Default: 't2.small'
   LogsRetentionInDays:
     Description: 'Specifies the number of days you want to retain log events.'
     Type: Number
