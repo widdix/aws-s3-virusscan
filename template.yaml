@@ -14,6 +14,7 @@ Metadata:
       Parameters:
       - DeleteInfectedFiles
       - ReportCleanFiles
+      - S3ResourceRestriction
     - Label:
         default: 'Auto Scaling Group Parameters'
       Parameters:
@@ -36,6 +37,10 @@ Parameters:
     Description: 'Optional stack name of parent SSH bastion host/instance stack based on vpc/vpc-ssh-bastion.yaml template.'
     Type: String
     Default: ''
+  S3ResourceRestriction:
+    Description: 'Restrict access to specific S3 buckets (e.g. arn:aws:s3:::s3-virusscan-a/*,arn:aws:s3:::s3-virusscan-b/* or * to allow access to all S3 resources).'
+    Type: CommaDelimitedList
+    Default: '*'
   DeleteInfectedFiles:
     Description: 'Automatically delete infected files'
     Type: String
@@ -99,6 +104,7 @@ Conditions:
   HasSSHBastionSecurityGroup: !Not [!Equals [!Ref ParentSSHBastionStack, '']]
   HasNotSSHBastionSecurityGroup: !Equals [!Ref ParentSSHBastionStack, '']
   HasNewRelic: !Not [!Equals [!Ref NewRelicLicenseKey, '']]
+  HasDeleteInfectedFiles: !Equals [!Ref DeleteInfectedFiles, 'true']
 Resources:
 Mappings:
   RegionMap:
@@ -256,15 +262,14 @@ Resources:
           Action: sts:AssumeRole
       Path: /
       Policies:
-      - PolicyName: s3
+      - PolicyName: s3read
         PolicyDocument:
           Version: '2012-10-17'
           Statement:
           - Effect: Allow
             Action:
             - 's3:GetObject*'
-            - 's3:DeleteObject*'
-            Resource: '*'
+            Resource: !Ref S3ResourceRestriction
       - PolicyName: sqs
         PolicyDocument:
           Version: '2012-10-17'
@@ -292,6 +297,20 @@ Resources:
             - 'logs:PutLogEvents'
             - 'logs:DescribeLogStreams'
             Resource: 'arn:aws:logs:*:*:*'
+  DeletePolicy:
+    Type: "AWS::IAM::Policy"
+    Condition: HasDeleteInfectedFiles
+    Properties: 
+      PolicyDocument: 
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Action:
+          - 's3:DeleteObject*'
+          Resource: !Ref S3ResourceRestriction
+      PolicyName: s3delete
+      Roles:
+        - !Ref ScanIAMRole
   ScanIAMPolicySSHAccess:
     Type: 'AWS::IAM::Policy'
     Condition: HasIAMUserSSHAccess
