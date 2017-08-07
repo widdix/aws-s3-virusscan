@@ -26,6 +26,7 @@ Metadata:
       - KeyName
       - IAMUserSSHAccess
       - InstanceType
+      - SpotPrice
       - LogsRetentionInDays
       - VolumeSize
       - NewRelicLicenseKey
@@ -60,7 +61,7 @@ Parameters:
     Type: Number
     Default: 1
     ConstraintDescription: 'Must be >= 1'
-    MinValue: 1
+    MinValue: 0
   AutoScalingMaxSize:
     Description: 'Max Size for Auto Scaling'
     Type: Number
@@ -81,6 +82,10 @@ Parameters:
     Description: 'Specifies the instance type of the EC2 instance'
     Type: String
     Default: 't2.small'
+  SpotPrice:
+    Description: 'The spot price.'
+    Type: Number
+    Default: '0.023'
   LogsRetentionInDays:
     Description: 'Specifies the number of days you want to retain log events.'
     Type: Number
@@ -170,7 +175,7 @@ Resources:
       Dimensions:
       - Name: QueueName
         Value: !GetAtt 'ScanQueue.QueueName'
-      EvaluationPeriods: 1
+      EvaluationPeriods: 15
       MetricName: ApproximateNumberOfMessagesVisible
       Namespace: 'AWS/SQS'
       Period: 60
@@ -733,6 +738,7 @@ Resources:
       IamInstanceProfile: !Ref ScanInstanceProfile
       ImageId: !FindInMap [RegionMap, !Ref 'AWS::Region', AMI]
       InstanceType: !Ref InstanceType
+      SpotPrice: !Ref SpotPrice
       SecurityGroups:
       - !Ref ScanSecurityGroup
       UserData:
