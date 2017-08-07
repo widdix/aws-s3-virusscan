@@ -81,11 +81,11 @@ Parameters:
   InstanceType:
     Description: 'Specifies the instance type of the EC2 instance'
     Type: String
-    Default: 't2.small'
+    Default: 'm3.medium'
   SpotPrice:
     Description: 'The spot price.'
     Type: Number
-    Default: '0.023'
+    Default: '0.067'
   LogsRetentionInDays:
     Description: 'Specifies the number of days you want to retain log events.'
     Type: Number
