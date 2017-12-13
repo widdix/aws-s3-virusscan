@@ -14,7 +14,8 @@ Metadata:
       Parameters:
       - DeleteInfectedFiles
       - ReportCleanFiles
-      - S3ResourceRestriction
+      - S3BucketRestriction
+      - S3ObjectRestriction
     - Label:
         default: 'Auto Scaling Group Parameters'
       Parameters:
@@ -38,8 +39,12 @@ Parameters:
     Description: 'Optional stack name of parent SSH bastion host/instance stack based on vpc/vpc-ssh-bastion.yaml template.'
     Type: String
     Default: ''
-  S3ResourceRestriction:
-    Description: 'Restrict access to specific S3 buckets (e.g. arn:aws:s3:::s3-virusscan-a/*,arn:aws:s3:::s3-virusscan-b/* or * to allow access to all S3 resources).'
+  S3BucketRestriction:
+    Description: 'Restrict access to specific S3 buckets (e.g. arn:aws:s3:::s3-virusscan-a,arn:aws:s3:::s3-virusscan-b or * to allow access to all S3 buckets).'
+    Type: CommaDelimitedList
+    Default: '*'
+  S3ObjectRestriction:
+    Description: 'Restrict access to specific S3 objects (e.g. arn:aws:s3:::s3-virusscan-a/*,arn:aws:s3:::s3-virusscan-b/* or * to allow access to all S3 objects).'
     Type: CommaDelimitedList
     Default: '*'
   DeleteInfectedFiles:
@@ -289,7 +294,11 @@ Resources:
           - Effect: Allow
             Action:
             - 's3:GetObject*'
-            Resource: !Ref S3ResourceRestriction
+            Resource: !Ref S3ObjectRestriction
+          - Effect: Allow
+            Action:
+            - 's3:ListBucket*'
+            Resource: !Ref S3BucketRestriction
       - PolicyName: sqs
         PolicyDocument:
           Version: '2012-10-17'
@@ -327,7 +336,7 @@ Resources:
         - Effect: Allow
           Action:
           - 's3:DeleteObject*'
-          Resource: !Ref S3ResourceRestriction
+          Resource: !Ref S3ObjectRestriction
       PolicyName: s3delete
       Roles:
         - !Ref ScanIAMRole
