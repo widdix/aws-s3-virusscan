@@ -214,6 +214,22 @@ Resources:
       ComparisonOperator: GreaterThanOrEqualToThreshold
       AlarmActions:
       - !Ref FindingsTopic
+  ScanQueueOldMessagesAlarm:
+    Type: 'AWS::CloudWatch::Alarm'
+    Properties:
+      AlarmDescription: 'Alarm if scan queue contains a message older than 1 hour'
+      Namespace: 'AWS/SQS'
+      MetricName: ApproximateAgeOfOldestMessage
+      Dimensions:
+      - Name: QueueName
+        Value: !GetAtt 'ScanQueue.QueueName'
+      Statistic: Maximum
+      Period: 60
+      EvaluationPeriods: 1
+      Threshold: 3600 # 1 hour
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      AlarmActions:
+      - !Ref FindingsTopic
   ScanAutoScalingGroup:
     Type: 'AWS::AutoScaling::AutoScalingGroup'
     Properties:
