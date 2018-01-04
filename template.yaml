@@ -167,12 +167,12 @@ Resources:
       Dimensions:
       - Name: QueueName
         Value: !GetAtt 'ScanQueue.QueueName'
-      EvaluationPeriods: 1
+      EvaluationPeriods: 2
       MetricName: ApproximateNumberOfMessagesVisible
       Namespace: 'AWS/SQS'
-      Period: 60
+      Period: 300
       Statistic: Sum
-      Threshold: 100
+      Threshold: 0
   ScanQueueEmptyAlarm:
     Type: 'AWS::CloudWatch::Alarm'
     Properties:
@@ -182,10 +182,10 @@ Resources:
       Dimensions:
       - Name: QueueName
         Value: !GetAtt 'ScanQueue.QueueName'
-      EvaluationPeriods: 15
+      EvaluationPeriods: 2
       MetricName: ApproximateNumberOfMessagesVisible
       Namespace: 'AWS/SQS'
-      Period: 60
+      Period: 300
       Statistic: Sum
       Threshold: 0
   ScanQueuePolicy:
