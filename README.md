@@ -38,7 +38,9 @@ A picture is worth a thousand words:
 ### Configure the buckets
 Configure the buckets you want to connect to S3 VirusScan as shown in the next figure:
 
-![Configure Event Notifications](./docs/configure_event_notifications.png?raw=true "Configure Event Notifications")
+![Configure Event Notifications 1](./docs/configure_event_notifications1.png?raw=true "Configure Event Notifications 1")
+
+![Configure Event Notifications 2](./docs/configure_event_notifications2.png?raw=true "Configure Event Notifications 2")
 
 **Make sure you select the *-ScanQueue-* NOT the *-ScanQueueDLQ-*!**
 
