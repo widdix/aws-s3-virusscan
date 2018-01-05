@@ -322,7 +322,7 @@ Resources:
             - 'logs:DescribeLogStreams'
             Resource: 'arn:aws:logs:*:*:*'
   DeletePolicy:
-    Type: "AWS::IAM::Policy"
+    Type: 'AWS::IAM::Policy'
     Condition: HasDeleteInfectedFiles
     Properties: 
       PolicyDocument: 
