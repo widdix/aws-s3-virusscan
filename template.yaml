@@ -738,9 +738,10 @@ Resources:
       - !Ref ScanSecurityGroup
       UserData:
         'Fn::Base64': !Sub |
-          #!/bin/bash -x
+          #!/bin/bash -ex
+          trap '/opt/aws/bin/cfn-signal -e 1 --stack ${AWS::StackName} --resource ScanAutoScalingGroup --region ${AWS::Region}' ERR
           /opt/aws/bin/cfn-init -v --stack ${AWS::StackName} --resource ScanLaunchConfiguration --region ${AWS::Region}
-          /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackName} --resource ScanAutoScalingGroup --region ${AWS::Region}
+          /opt/aws/bin/cfn-signal -e 0 --stack ${AWS::StackName} --resource ScanAutoScalingGroup --region ${AWS::Region}
   ScanSecurityGroup:
     Type: 'AWS::EC2::SecurityGroup'
     Properties:
