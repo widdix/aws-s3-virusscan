@@ -85,11 +85,13 @@ Parameters:
   InstanceType:
     Description: 'Specifies the instance type of the EC2 instance'
     Type: String
-    Default: 'm3.medium'
+    Default: 't2.small'
   SpotPrice:
-    Description: 'The spot price.'
-    Type: Number
-    Default: '0.067'
+    Description: 'Optional spot price (leave empty to start on-demand instances).'
+    Type: String
+    AllowedPattern: '[0-9\.]*'
+    ConstraintDescription: 'Must be a positive number'
+    Default: ''
   LogsRetentionInDays:
     Description: 'Specifies the number of days you want to retain log events.'
     Type: Number
@@ -108,6 +110,7 @@ Conditions:
   HasSSHBastionSecurityGroup: !Not [!Equals [!Ref ParentSSHBastionStack, '']]
   HasNotSSHBastionSecurityGroup: !Equals [!Ref ParentSSHBastionStack, '']
   HasDeleteInfectedFiles: !Equals [!Ref DeleteInfectedFiles, 'true']
+  HasSpotPrice: !Not [!Equals [!Ref SpotPrice, '']]
 Mappings:
   RegionMap:
     'ap-south-1':
@@ -733,7 +736,7 @@ Resources:
       IamInstanceProfile: !Ref ScanInstanceProfile
       ImageId: !FindInMap [RegionMap, !Ref 'AWS::Region', AMI]
       InstanceType: !Ref InstanceType
-      SpotPrice: !Ref SpotPrice
+      SpotPrice: !If [HasSpotPrice, !Ref SpotPrice, !Ref 'AWS::NoValue']
       SecurityGroups:
       - !Ref ScanSecurityGroup
       UserData:
