@@ -693,12 +693,15 @@ Resources:
               command: 'sed -i "s/^FRESHCLAM_DELAY/#FRESHCLAM_DELAY/g" /etc/sysconfig/freshclam'
             b_enable_freshclam:
               command: 'sed -i "s/^Example/#Example/g" /etc/freshclam.conf'
-            c_enable_clamd_scan:
+            c_prepare_local_sopcket:
+              command: 'mkdir /var/run/clamd.scan && chown clamscan:clamscan /var/run/clamd.scan'
+              test: '[ ! -d /var/run/clamd.scan ]'
+            d_enable_clamd_scan:
               command: 'sed -i "s/^Example/#Example/g;s/^#LocalSocket /LocalSocket /g" /etc/clamd.d/scan.conf'
-            d_add_clamdscan_config:
+            e_add_clamdscan_config:
               command: 'ln -s /etc/clamd.d/scan.conf /etc/clamd.conf'
               test: '[ ! -f /etc/clamd.conf ]'
-            e_update_clamav_db:
+            f_update_clamav_db:
               command: freshclam
           services:
             sysvinit:
