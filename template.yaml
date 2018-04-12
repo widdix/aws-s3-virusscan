@@ -123,6 +123,7 @@ Conditions:
   HasSSHBastionSecurityGroup: !Not [!Equals [!Ref ParentSSHBastionStack, '']]
   HasNotSSHBastionSecurityGroup: !Equals [!Ref ParentSSHBastionStack, '']
   HasDeleteInfectedFiles: !Equals [!Ref DeleteInfectedFiles, 'true']
+  HasTagFiles: !Equals [!Ref TagFiles, 'true']
   HasSpotPrice: !Not [!Equals [!Ref SpotPrice, '']]
 Mappings:
   RegionMap:
@@ -349,6 +350,22 @@ Resources:
           - 's3:DeleteObject*'
           Resource: !Ref S3ObjectRestriction
       PolicyName: s3delete
+      Roles:
+        - !Ref ScanIAMRole
+  TagObjectPolicy:
+    Type: 'AWS::IAM::Policy'
+    Condition: HasTagFiles
+    Properties:
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Action: 's3:PutObjectTagging'
+            Resource: !Ref S3ObjectRestriction
+            Condition:
+              'ForAllValues:StringLike':
+                's3:RequestObjectTagKeys': !Ref TagKey
+      PolicyName: s3objecttag
       Roles:
         - !Ref ScanIAMRole
   ScanIAMPolicySSHAccess:
