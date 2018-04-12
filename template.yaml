@@ -63,14 +63,14 @@ Parameters:
     - true
     - false
   TagFiles:
-    Description: 'Tag successful scan of clean, as well as infected files'
+    Description: 'Tag S3 object upon successful scan accordingly with values of "clean" or "infected" using key specified by TagKey.'
     Type: String
     Default: false
     AllowedValues:
     - true
     - false
   TagKey:
-    Description: 'S3 object tag key used to specify "clean" or "infected".'
+    Description: 'S3 object tag key used to specify values of "clean" or "infected".'
     Type: String
     Default: 'clamav-status'
   AutoScalingMinSize:
