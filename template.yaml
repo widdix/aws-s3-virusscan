@@ -14,6 +14,8 @@ Metadata:
       Parameters:
       - DeleteInfectedFiles
       - ReportCleanFiles
+      - TagFiles
+      - TagKey
       - S3BucketRestriction
       - S3ObjectRestriction
     - Label:
@@ -60,6 +62,17 @@ Parameters:
     AllowedValues:
     - true
     - false
+  TagFiles:
+    Description: 'Tag S3 object upon successful scan accordingly with values of "clean" or "infected" using key specified by TagKey.'
+    Type: String
+    Default: false
+    AllowedValues:
+    - true
+    - false
+  TagKey:
+    Description: 'S3 object tag key used to specify values of "clean" or "infected".'
+    Type: String
+    Default: 'clamav-status'
   AutoScalingMinSize:
     Description: 'Min Size for Auto Scaling'
     Type: Number
@@ -110,6 +123,7 @@ Conditions:
   HasSSHBastionSecurityGroup: !Not [!Equals [!Ref ParentSSHBastionStack, '']]
   HasNotSSHBastionSecurityGroup: !Equals [!Ref ParentSSHBastionStack, '']
   HasDeleteInfectedFiles: !Equals [!Ref DeleteInfectedFiles, 'true']
+  HasTagFiles: !Equals [!Ref TagFiles, 'true']
   HasSpotPrice: !Not [!Equals [!Ref SpotPrice, '']]
 Mappings:
   RegionMap:
@@ -338,6 +352,22 @@ Resources:
       PolicyName: s3delete
       Roles:
         - !Ref ScanIAMRole
+  TagObjectPolicy:
+    Type: 'AWS::IAM::Policy'
+    Condition: HasTagFiles
+    Properties:
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Action: 's3:PutObjectTagging'
+            Resource: !Ref S3ObjectRestriction
+            Condition:
+              'ForAllValues:StringLike':
+                's3:RequestObjectTagKeys': !Ref TagKey
+      PolicyName: s3objecttag
+      Roles:
+        - !Ref ScanIAMRole
   ScanIAMPolicySSHAccess:
     Type: 'AWS::IAM::Policy'
     Condition: HasIAMUserSSHAccess
@@ -519,7 +549,7 @@ Resources:
               clamd: []
               clamav-update: []
             rubygems:
-              aws-sdk: ['2.2.29']
+              aws-sdk: ['2.11.33']
               daemons: ['1.2.4']
               rubysl-securerandom: ['2.0.0']
           files:
@@ -543,7 +573,7 @@ Resources:
 
                 class ClamScanWorker
 
-                  attr_reader :log, :conf, :sns
+                  attr_reader :log, :conf, :sns, :tag_key, :clean_tag_set, :infected_tag_set
 
                   CLEAN_STATUS = 'clean'
                   INFECTED_STATUS = 'infected'
@@ -552,6 +582,9 @@ Resources:
                     @log = Syslog::Logger.new 's3-virusscan'
                     @conf = YAML::load_file(__dir__ + '/s3-virusscan.conf')
                     Aws.config.update(region: conf['region'])
+                    @tag_key = conf['tag_key']
+                    @clean_tag_set = {tag_set: [{key: tag_key, value: CLEAN_STATUS}]}
+                    @infected_tag_set = {tag_set: [{key: tag_key, value: INFECTED_STATUS}]}
                     @sns = Aws::SNS::Client.new()
                   end
 
@@ -589,6 +622,13 @@ Resources:
                                 else
                                   log.debug "s3://#{bucket}/#{key} is clean"
                                 end
+                                if conf['tag_files']
+                                  s3.put_object_tagging({
+                                      bucket: bucket,
+                                      key: key,
+                                      tagging: clean_tag_set
+                                  })
+                                end
                               elsif exitstatus == 1 # Virus(es) found.
                                 publish_notification(bucket, key, INFECTED_STATUS);
                                 if conf['delete']
@@ -597,6 +637,12 @@ Resources:
                                     key: key
                                   )
                                   log.debug "s3://#{bucket}/#{key} was deleted"
+                                elsif conf['tag_files']
+                                  s3.put_object_tagging({
+                                      bucket: bucket,
+                                      key: key,
+                                      tagging: infected_tag_set
+                                  })
                                 end
                               else # An error occured.
                                 raise "s3://#{bucket}/#{key} could not be scanned, clamdscan exit status was #{exitstatus}, retry"
@@ -649,6 +695,8 @@ Resources:
               content: !Sub |
                 delete: ${DeleteInfectedFiles}
                 report_clean: ${ReportCleanFiles}
+                tag_files: ${TagFiles}
+                tag_key: ${TagKey}
                 region: ${AWS::Region}
                 queue: ${ScanQueue}
                 topic: ${FindingsTopic}
