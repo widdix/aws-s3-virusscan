@@ -63,7 +63,7 @@ Parameters:
     - true
     - false
   TagFiles:
-    Description: 'Tag S3 object upon successful scan accordingly with values of "clean" or "infected" using key specified by TagKey.'
+    Description: 'Tag S3 object upon successful scan accordingly with values of "clean" or "infected" (only if DeleteInfectedFiles != false) using key specified by TagKey.'
     Type: String
     Default: false
     AllowedValues:
@@ -77,7 +77,7 @@ Parameters:
     Description: 'Min Size for Auto Scaling'
     Type: Number
     Default: 1
-    ConstraintDescription: 'Must be >= 1'
+    ConstraintDescription: 'Must be >= 0'
     MinValue: 0
   AutoScalingMaxSize:
     Description: 'Max Size for Auto Scaling'
