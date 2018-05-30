@@ -13,3 +13,29 @@ $ for region in $regions; do ami=$(aws --region $region ec2 describe-images --fi
 ```
 freshclam
 ```
+
+## Fetch infected examples
+
+> Install and configure clamd first (e.g. use the template.yaml)
+
+```
+curl 'https://objective-see.com/malware.json' | jq -r '.malware[].download' | grep '.zip' | while read -r line; do 
+  wget "$line" -O temp.zip;
+  unzip -P infect3d temp.zip;
+  rm temp.zip
+done
+chmod -R a+r *
+rm -rf FakeFileOpener
+
+find . -name readme.txt | while read -r line; do
+  cat "$line" | sed -e '1,/file(s):/d' | grep . | sed "s#^#${line::-10}#" | awk -F ' -> ' '{print $1}'; 
+done | while read -r line; do
+  if [ -f "$line" ]; then
+    echo "$line"; 
+  fi
+done | while read -r line; do
+  clamdscan "${line:2}"
+done | grep 'FOUND' | awk -F ':' '{print $1}' | while read -r line; do
+  aws s3 cp --acl bucket-owner-full-control "$line" "s3://widdix-aws-s3-virusscan-infected-examples/${line:5}"
+done
+```

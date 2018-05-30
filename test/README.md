@@ -11,6 +11,8 @@ If you run this tests, many AWS CloudFormation tests are created and **charges w
 * `IAM_ROLE_ARN` if the tests should assume an IAM role before they run supply the ARN of the IAM role
 * `TEMPLATE_DIR` Load templates from local disk (instead of S3 bucket `widdix-aws-cf-templates`). Must end with an `/`. See `BUCKET_NAME` as well.
 * `DELETION_POLICY` (default `delete`, allowed values [`delete`, `retain`]) should resources be deleted?
+* `INFECTED_FILES_BUCKET_NAME` S3 bucket name with infected files (all objects must be infected!). Ignored if not set.
+* `INFECTED_FILES_BUCKET_REGION` **required if INFECTED_FILES_BUCKET_NAME is set** Region of the bucket.
 
 ## Usage
 

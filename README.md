@@ -55,6 +55,13 @@ You will receive a confirmation email.
 
 ## Test
 
+### Extensive test
+
+Thanks to [Objective-See](https://objective-see.com/) for providing infected files that we use for testing. Download one of the files upload it to your S3 bucket for testing.
+We also have automated tests in place!
+
+### Simple test
+
 Create a [EICAR Standard Anti-Virus Test File](https://en.wikipedia.org/wiki/EICAR_test_file) with the following content:
 
 ```

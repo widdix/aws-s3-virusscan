@@ -5,7 +5,9 @@ public final class Config {
     public enum Key {
         TEMPLATE_DIR("TEMPLATE_DIR"),
         IAM_ROLE_ARN("IAM_ROLE_ARN"),
-        DELETION_POLICY("DELETION_POLICY", "delete");
+        DELETION_POLICY("DELETION_POLICY", "delete"),
+        INFECTED_FILES_BUCKET_NAME("INFECTED_FILES_BUCKET_NAME"),
+        INFECTED_FILES_BUCKET_REGION("INFECTED_FILES_BUCKET_REGION");
 
         private final String name;
         private final String defaultValue;

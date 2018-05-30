@@ -112,4 +112,37 @@ public class TestS3VirusScan extends ACloudFormationTest {
             this.deleteStack(vpcStackName);
         }
     }
+
+    @Test
+    public void testManyFiles() {
+        final String vpcStackName = "vpc-2azs-" + this.random8String();
+        final String stackName = "s3-virusscan-" + this.random8String();
+        final String bucketName = "s3-virusscan-" + this.random8String();
+        final InfectedFileCache cache = new InfectedFileCache();
+        try {
+            this.createWiddixStack(vpcStackName, "vpc/vpc-2azs.yaml");
+            try {
+                this.createStack(stackName,
+                        "template.yaml",
+                        new Parameter().withParameterKey("ParentVPCStack").withParameterValue(vpcStackName)
+                );
+                try {
+                    this.createBucket(bucketName, this.getStackOutputValue(stackName, "ScanQueueArn"));
+                    cache.getFiles().forEach(file -> this.createObject(bucketName, file.getkey(), file.getContent(), file.getContentType(), file.getContentLength()));
+                    this.retry(() -> {
+                        if (this.countBucket(bucketName) != 0) { // all files are expected to be deleted
+                            throw new RuntimeException("there are infected files left");
+                        }
+                        return false;
+                    });
+                } finally {
+                    this.deleteBucket(bucketName);
+                }
+            } finally {
+                this.deleteStack(stackName);
+            }
+        } finally {
+            this.deleteStack(vpcStackName);
+        }
+    }
 }

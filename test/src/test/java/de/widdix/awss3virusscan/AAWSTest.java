@@ -10,6 +10,7 @@ import com.amazonaws.services.s3.model.*;
 import com.amazonaws.services.securitytoken.AWSSecurityTokenService;
 import com.amazonaws.services.securitytoken.AWSSecurityTokenServiceClientBuilder;
 
+import java.io.InputStream;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.UUID;
@@ -38,8 +39,16 @@ public abstract class AAWSTest extends ATest {
         this.s3.setBucketNotificationConfiguration(name, new BucketNotificationConfiguration("test", new QueueConfiguration(queueArn, EnumSet.of(S3Event.ObjectCreated))));
     }
 
-    protected final void createObject(final String bucketName, final String key, final String body) {
-        this.s3.putObject(bucketName, key, body);
+    protected final void createObject(final String bucketName, final String key, final String content) {
+        this.s3.putObject(bucketName, key, content);
+    }
+
+    protected final void createObject(final String bucketName, final String key, final InputStream content, final String contentType, final long contentLength) {
+        final ObjectMetadata metadata = new ObjectMetadata();
+        metadata.setContentType(contentType);
+        metadata.setContentLength(contentLength);
+
+        this.s3.putObject(bucketName, key, content, metadata);
     }
 
     protected final boolean doesObjectExist(final String bucketName, final String key) {
@@ -75,6 +84,20 @@ public abstract class AAWSTest extends ATest {
                 break;
             }
         }
+    }
+
+    protected long countBucket(final String name) {
+        long count = 0;
+        ObjectListing objectListing = s3.listObjects(name);
+        while (true) {
+            count += objectListing.getObjectSummaries().size();
+            if (objectListing.isTruncated()) {
+                objectListing = s3.listNextBatchOfObjects(objectListing);
+            } else {
+                break;
+            }
+        }
+        return count;
     }
 
     protected final void deleteBucket(final String name) {
