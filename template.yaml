@@ -355,8 +355,8 @@ Resources:
   DeletePolicy:
     Type: 'AWS::IAM::Policy'
     Condition: HasDeleteInfectedFiles
-    Properties: 
-      PolicyDocument: 
+    Properties:
+      PolicyDocument:
         Version: '2012-10-17'
         Statement:
         - Effect: Allow
@@ -365,7 +365,7 @@ Resources:
           Resource: !Ref S3ObjectRestriction
       PolicyName: s3delete
       Roles:
-        - !Ref ScanIAMRole
+      - !Ref ScanIAMRole
   TagObjectPolicy:
     Type: 'AWS::IAM::Policy'
     Condition: HasTagFiles
@@ -373,15 +373,15 @@ Resources:
       PolicyDocument:
         Version: '2012-10-17'
         Statement:
-          - Effect: Allow
-            Action: 's3:PutObjectTagging'
-            Resource: !Ref S3ObjectRestriction
-            Condition:
-              'ForAllValues:StringLike':
-                's3:RequestObjectTagKeys': !Ref TagKey
+        - Effect: Allow
+          Action: 's3:PutObjectTagging'
+          Resource: !Ref S3ObjectRestriction
+          Condition:
+            'ForAllValues:StringLike':
+              's3:RequestObjectTagKeys': !Ref TagKey
       PolicyName: s3objecttag
       Roles:
-        - !Ref ScanIAMRole
+      - !Ref ScanIAMRole
   ScanIAMPolicySSHAccess:
     Type: 'AWS::IAM::Policy'
     Condition: HasIAMUserSSHAccess
@@ -721,7 +721,7 @@ Resources:
               content: |
                 #!/usr/bin/env ruby
                 # chkconfig:    - 80 20
-                APP_NAME = 's3-virusscan'  
+                APP_NAME = 's3-virusscan'
                 APP_PATH = '/opt/aws-s3-virusscan/daemon.rb'
                 case ARGV.first
                   when 'start'
