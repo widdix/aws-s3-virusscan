@@ -5,7 +5,7 @@ To update the region map execute the following lines in your terminal:
 
 ```
 $ regions=$(aws ec2 describe-regions --query "Regions[].RegionName" --output text)
-$ for region in $regions; do ami=$(aws --region $region ec2 describe-images --filters "Name=name,Values=amzn-ami-hvm-2017.09.1.20180115-x86_64-gp2" --query "Images[0].ImageId" --output "text"); printf "'$region':\n  AMI: '$ami'\n"; done
+$ for region in $regions; do ami=$(aws --region $region ec2 describe-images --filters "Name=name,Values=amzn-ami-hvm-2018.03.0.20180811-x86_64-gp2" --query "Images[0].ImageId" --output "text"); printf "'$region':\n  AMI: '$ami'\n"; done
 ```
 
 ## Manually Update ClamAV db
@@ -38,4 +38,13 @@ done | while read -r line; do
 done | grep 'FOUND' | awk -F ':' '{print $1}' | while read -r line; do
   aws s3 cp --acl bucket-owner-full-control "$line" "s3://widdix-aws-s3-virusscan-infected-examples/${line:5}"
 done
+```
+
+## Simulate load
+
+```
+mkdir loadtest/
+cd loadtest/
+for i in {1..10000}; do touch "file${i}.txt"; done
+aws s3 sync . s3://bucketname
 ```

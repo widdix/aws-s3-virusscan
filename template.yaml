@@ -191,11 +191,11 @@ Resources:
       Dimensions:
       - Name: QueueName
         Value: !GetAtt 'ScanQueue.QueueName'
-      EvaluationPeriods: 2
+      EvaluationPeriods: 1
       MetricName: ApproximateNumberOfMessagesVisible
       Namespace: 'AWS/SQS'
       Period: 300
-      Statistic: Sum
+      Statistic: Maximum
       Threshold: 0
   ScanQueueEmptyAlarm:
     Type: 'AWS::CloudWatch::Alarm'
@@ -206,11 +206,11 @@ Resources:
       Dimensions:
       - Name: QueueName
         Value: !GetAtt 'ScanQueue.QueueName'
-      EvaluationPeriods: 2
+      EvaluationPeriods: 1
       MetricName: ApproximateNumberOfMessagesVisible
       Namespace: 'AWS/SQS'
       Period: 300
-      Statistic: Sum
+      Statistic: Maximum
       Threshold: 0
   ScanQueuePolicy:
     Type: 'AWS::SQS::QueuePolicy'
@@ -269,8 +269,8 @@ Resources:
       MaxSize: !Ref AutoScalingMaxSize
       MinSize: !Ref AutoScalingMinSize
       VPCZoneIdentifier:
-      - 'Fn::ImportValue': !Sub '${ParentVPCStack}-SubnetAPublic'
-      - 'Fn::ImportValue': !Sub '${ParentVPCStack}-SubnetBPublic'
+      - {'Fn::ImportValue': !Sub '${ParentVPCStack}-SubnetAPublic'}
+      - {'Fn::ImportValue': !Sub '${ParentVPCStack}-SubnetBPublic'}
       Tags:
       - Key: Name
         Value: !Ref 'AWS::StackName'
@@ -287,15 +287,39 @@ Resources:
     Properties:
       AdjustmentType: ChangeInCapacity
       AutoScalingGroupName: !Ref ScanAutoScalingGroup
-      Cooldown: 300
-      ScalingAdjustment: 1
+      EstimatedInstanceWarmup: 300
+      MetricAggregationType: Maximum
+      PolicyType: StepScaling
+      StepAdjustments:
+      - MetricIntervalLowerBound: 0
+        MetricIntervalUpperBound: 25
+        ScalingAdjustment: 1
+      - MetricIntervalLowerBound: 25
+        MetricIntervalUpperBound: 100
+        ScalingAdjustment: 2
+      - MetricIntervalLowerBound: 100
+        MetricIntervalUpperBound: 400
+        ScalingAdjustment: 4
+      - MetricIntervalLowerBound: 400
+        MetricIntervalUpperBound: 1600
+        ScalingAdjustment: 8
+      - MetricIntervalLowerBound: 1600
+        MetricIntervalUpperBound: 6400
+        ScalingAdjustment: 16
+      - MetricIntervalLowerBound: 6400
+        MetricIntervalUpperBound: 25600
+        ScalingAdjustment: 32
+      - MetricIntervalLowerBound: 25600
+        ScalingAdjustment: 64
   ScanScaleDown:
     Type: 'AWS::AutoScaling::ScalingPolicy'
     Properties:
-      AdjustmentType: ChangeInCapacity
+      AdjustmentType: PercentChangeInCapacity
       AutoScalingGroupName: !Ref ScanAutoScalingGroup
-      Cooldown: 300
-      ScalingAdjustment: -1
+      Cooldown: '300'
+      MinAdjustmentMagnitude: 1
+      PolicyType: SimpleScaling
+      ScalingAdjustment: -25
   ScanInstanceProfile:
     Type: 'AWS::IAM::InstanceProfile'
     Properties:
@@ -825,8 +849,7 @@ Resources:
     Type: 'AWS::EC2::SecurityGroup'
     Properties:
       GroupDescription: 'S3 VirusScan'
-      VpcId:
-        'Fn::ImportValue': !Sub '${ParentVPCStack}-VPC'
+      VpcId: {'Fn::ImportValue': !Sub '${ParentVPCStack}-VPC'}
   ScanSecurityGroupInSSHBastion:
     Type: 'AWS::EC2::SecurityGroupIngress'
     Condition: HasSSHBastionSecurityGroup
@@ -835,8 +858,7 @@ Resources:
       IpProtocol: tcp
       FromPort: 22
       ToPort: 22
-      SourceSecurityGroupId:
-        'Fn::ImportValue': !Sub '${ParentSSHBastionStack}-SecurityGroup'
+      SourceSecurityGroupId: {'Fn::ImportValue': !Sub '${ParentSSHBastionStack}-SecurityGroup'}
   ScanSecurityGroupInAll:
     Type: 'AWS::EC2::SecurityGroupIngress'
     Condition: HasNotSSHBastionSecurityGroup
