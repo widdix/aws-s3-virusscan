@@ -8,8 +8,8 @@ env:
 python:
 - '2.7'
 install:
-- 'pip install yamllint'
-- 'pip install awscli'
+- 'pip install yamllint==1.13.0'
+- 'pip install awscli==1.16.69'
 script:
 - 'yamllint .'
 - 'find . -type f \( -name ''*.yml'' -o -name ''*.yaml'' \) -a ! -name ''.*'' | while read file; do set -ex && grep -q "LICENSE-2.0" "$file"; done;'

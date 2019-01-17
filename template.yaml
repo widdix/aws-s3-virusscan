@@ -41,6 +41,7 @@ Metadata:
       Parameters:
       - KeyName
       - IAMUserSSHAccess
+      - SystemsManagerAccess
       - InstanceType
       - SpotPrice
       - LogsRetentionInDays
@@ -109,6 +110,13 @@ Parameters:
     AllowedValues:
     - true
     - false
+  SystemsManagerAccess:
+    Description: 'Enable AWS Systems Manager agent and authorization.'
+    Type: String
+    Default: true
+    AllowedValues:
+    - true
+    - false
   InstanceType:
     Description: 'Specifies the instance type of the EC2 instance'
     Type: String
@@ -134,6 +142,7 @@ Parameters:
 Conditions:
   HasKeyName: !Not [!Equals [!Ref KeyName, '']]
   HasIAMUserSSHAccess: !Equals [!Ref IAMUserSSHAccess, 'true']
+  HasSystemsManagerAccess: !Equals [!Ref SystemsManagerAccess, 'true']
   HasSSHBastionSecurityGroup: !Not [!Equals [!Ref ParentSSHBastionStack, '']]
   HasNotSSHBastionSecurityGroup: !Equals [!Ref ParentSSHBastionStack, '']
   HasDeleteInfectedFiles: !Equals [!Ref DeleteInfectedFiles, 'true']
@@ -142,35 +151,37 @@ Conditions:
 Mappings:
   RegionMap:
     'ap-south-1':
-      AMI: 'ami-0912f71e06545ad88'
+      AMI: 'ami-06bcd1131b2f55803'
     'eu-west-3':
-      AMI: 'ami-0ebc281c20e89ba4b'
+      AMI: 'ami-051707cdba246187b'
+    'eu-north-1':
+      AMI: 'ami-07ec6279'
     'eu-west-2':
-      AMI: 'ami-f976839e'
+      AMI: 'ami-0274e11dced17bb5b'
     'eu-west-1':
-      AMI: 'ami-047bb4163c506cd98'
+      AMI: 'ami-09693313102a30b2c'
     'ap-northeast-2':
-      AMI: 'ami-0a10b2721688ce9d2'
+      AMI: 'ami-0b4fdb56a00adb616'
     'ap-northeast-1':
-      AMI: 'ami-06cd52961ce9f0d85'
+      AMI: 'ami-0a2de1c3b415889d2'
     'sa-east-1':
-      AMI: 'ami-07b14488da8ea02a0'
+      AMI: 'ami-0112d42866980b373'
     'ca-central-1':
-      AMI: 'ami-0b18956f'
+      AMI: 'ami-076b4adb3f90cd384'
     'ap-southeast-1':
-      AMI: 'ami-08569b978cc4dfa10'
+      AMI: 'ami-0b84d2c53ad5250c2'
     'ap-southeast-2':
-      AMI: 'ami-09b42976632b27e9b'
+      AMI: 'ami-08589eca6dcc9b39c'
     'eu-central-1':
-      AMI: 'ami-0233214e13e500f77'
+      AMI: 'ami-034fffcc6a0063961'
     'us-east-1':
-      AMI: 'ami-0ff8a91507f77f867'
+      AMI: 'ami-009d6802948d06e52'
     'us-east-2':
-      AMI: 'ami-0b59bfac6be064b78'
+      AMI: 'ami-02e680c4540db351e'
     'us-west-1':
-      AMI: 'ami-0bdb828fd58c52235'
+      AMI: 'ami-011b6930a81cd6aaf'
     'us-west-2':
-      AMI: 'ami-a0cfeed8'
+      AMI: 'ami-01bbe152bf19d0289'
 Resources:
   FindingsTopic:
     Type: 'AWS::SNS::Topic'
@@ -268,20 +279,18 @@ Resources:
       LaunchConfigurationName: !Ref ScanLaunchConfiguration
       MaxSize: !Ref AutoScalingMaxSize
       MinSize: !Ref AutoScalingMinSize
-      VPCZoneIdentifier:
-      - {'Fn::ImportValue': !Sub '${ParentVPCStack}-SubnetAPublic'}
-      - {'Fn::ImportValue': !Sub '${ParentVPCStack}-SubnetBPublic'}
+      VPCZoneIdentifier: !Split [',', {'Fn::ImportValue': !Sub '${ParentVPCStack}-SubnetsPublic'}]
       Tags:
       - Key: Name
         Value: !Ref 'AWS::StackName'
         PropagateAtLaunch: true
-    CreationPolicy:
-      ResourceSignal:
-        Timeout: PT10M
-    UpdatePolicy:
-      AutoScalingRollingUpdate:
-        PauseTime: PT10M
-        WaitOnResourceSignals: true
+    #CreationPolicy:
+    #  ResourceSignal:
+    #    Timeout: PT10M
+    #UpdatePolicy:
+    #  AutoScalingRollingUpdate:
+    #    PauseTime: PT10M
+    #    WaitOnResourceSignals: true
   ScanScaleUp:
     Type: 'AWS::AutoScaling::ScalingPolicy'
     Properties:
@@ -335,6 +344,7 @@ Resources:
           Principal:
             Service: 'ec2.amazonaws.com'
           Action: sts:AssumeRole
+      ManagedPolicyArns: !If [HasSystemsManagerAccess, ['arn:aws:iam::aws:policy/service-role/AmazonEC2RoleforSSM'], []]
       Path: /
       Policies:
       - PolicyName: s3read
@@ -436,7 +446,7 @@ Resources:
     Metadata:
       'AWS::CloudFormation::Init':
         configSets:
-          default: !If [HasIAMUserSSHAccess, [awslogs, ssh-access, config], [awslogs, config]]
+          default: !If [HasIAMUserSSHAccess, [awslogs, ssh-access, extras1, extras2, config], [awslogs, extras1, extras2, config]]
         awslogs:
           packages:
             yum:
@@ -455,35 +465,28 @@ Resources:
               content: !Sub |
                 [general]
                 state_file = /var/lib/awslogs/agent-state
+                [/var/log/amazon/ssm/amazon-ssm-agent.log]
+                datetime_format = %Y-%m-%d %H:%M:%S
+                file = /var/log/amazon/ssm/amazon-ssm-agent.log
+                log_stream_name = {instance_id}/var/log/amazon/ssm/amazon-ssm-agent.log
+                log_group_name = ${Logs}
+                [/var/log/amazon/ssm/errors.log]
+                datetime_format = %Y-%m-%d %H:%M:%S
+                file = /var/log/amazon/ssm/errors.log
+                log_stream_name = {instance_id}/var/log/amazon/ssm/errors.log
+                log_group_name = ${Logs}
+                [/var/log/audit/audit.log]
+                file = /var/log/audit/audit.log
+                log_stream_name = {instance_id}/var/log/audit/audit.log
+                log_group_name = ${Logs}
                 [/var/log/awslogs.log]
                 datetime_format = %Y-%m-%d %H:%M:%S
                 file = /var/log/awslogs.log
                 log_stream_name = {instance_id}/var/log/awslogs.log
                 log_group_name = ${Logs}
-                [/var/log/messages]
-                datetime_format = %b %d %H:%M:%S
-                file = /var/log/messages
-                log_stream_name = {instance_id}/var/log/messages
-                log_group_name = ${Logs}
-                [/var/log/secure]
-                datetime_format = %b %d %H:%M:%S
-                file = /var/log/secure
-                log_stream_name = {instance_id}/var/log/secure
-                log_group_name = ${Logs}
-                [/var/log/cron]
-                datetime_format = %b %d %H:%M:%S
-                file = /var/log/cron
-                log_stream_name = {instance_id}/var/log/cron
-                log_group_name = ${Logs}
-                [/var/log/cloud-init.log]
-                datetime_format = %b %d %H:%M:%S
-                file = /var/log/cloud-init.log
-                log_stream_name = {instance_id}/var/log/cloud-init.log
-                log_group_name = ${Logs}
-                [/var/log/cfn-init.log]
-                datetime_format = %Y-%m-%d %H:%M:%S
-                file = /var/log/cfn-init.log
-                log_stream_name = {instance_id}/var/log/cfn-init.log
+                [/var/log/boot.log]
+                file = /var/log/boot.log
+                log_stream_name = {instance_id}/var/log/boot.log
                 log_group_name = ${Logs}
                 [/var/log/cfn-hup.log]
                 datetime_format = %Y-%m-%d %H:%M:%S
@@ -495,20 +498,64 @@ Resources:
                 file = /var/log/cfn-init-cmd.log
                 log_stream_name = {instance_id}/var/log/cfn-init-cmd.log
                 log_group_name = ${Logs}
+                [/var/log/cfn-init.log]
+                datetime_format = %Y-%m-%d %H:%M:%S
+                file = /var/log/cfn-init.log
+                log_stream_name = {instance_id}/var/log/cfn-init.log
+                log_group_name = ${Logs}
+                [/var/log/cfn-wire.log]
+                datetime_format = %Y-%m-%d %H:%M:%S
+                file = /var/log/cfn-wire.log
+                log_stream_name = {instance_id}/var/log/cfn-wire.log
+                log_group_name = ${Logs}
                 [/var/log/cloud-init-output.log]
                 file = /var/log/cloud-init-output.log
                 log_stream_name = {instance_id}/var/log/cloud-init-output.log
                 log_group_name = ${Logs}
+                [/var/log/cloud-init.log]
+                datetime_format = %b %d %H:%M:%S
+                file = /var/log/cloud-init.log
+                log_stream_name = {instance_id}/var/log/cloud-init.log
+                log_group_name = ${Logs}
+                [/var/log/cron]
+                datetime_format = %b %d %H:%M:%S
+                file = /var/log/cron
+                log_stream_name = {instance_id}/var/log/cron
+                log_group_name = ${Logs}
                 [/var/log/dmesg]
                 file = /var/log/dmesg
                 log_stream_name = {instance_id}/var/log/dmesg
+                log_group_name = ${Logs}
+                [/var/log/grubby_prune_debug]
+                file = /var/log/grubby_prune_debug
+                log_stream_name = {instance_id}/var/log/grubby_prune_debug
+                log_group_name = ${Logs}
+                [/var/log/maillog]
+                datetime_format = %b %d %H:%M:%S
+                file = /var/log/maillog
+                log_stream_name = {instance_id}/var/log/maillog
+                log_group_name = ${Logs}
+                [/var/log/messages]
+                datetime_format = %b %d %H:%M:%S
+                file = /var/log/messages
+                log_stream_name = {instance_id}/var/log/messages
+                log_group_name = ${Logs}
+                [/var/log/secure]
+                datetime_format = %b %d %H:%M:%S
+                file = /var/log/secure
+                log_stream_name = {instance_id}/var/log/secure
+                log_group_name = ${Logs}
+                [/var/log/yum.log]
+                datetime_format = %b %d %H:%M:%S
+                file = /var/log/yum.log
+                log_stream_name = {instance_id}/var/log/yum.log
                 log_group_name = ${Logs}
               mode: '000644'
               owner: root
               group: root
           services:
             sysvinit:
-              awslogs:
+              awslogsd:
                 enabled: true
                 ensureRunning: true
                 packages:
@@ -583,15 +630,28 @@ Resources:
                 commands:
                 - 'a_configure_sshd_command'
                 - 'b_configure_sshd_commanduser'
+        extras1:
+          commands:
+            a_enable_epel:
+              command: 'amazon-linux-extras enable epel=7.11'
+              test: "! grep -Fxq '[amzn2extra-epel]' /etc/yum.repos.d/amzn2-extras.repo"
+        extras2:
+          packages:
+            yum:
+              epel-release: []
         config:
           packages:
             yum:
               clamd: []
+              clamav: []
               clamav-update: []
+              ruby: []
             rubygems:
-              aws-sdk: ['2.11.33']
-              daemons: ['1.2.4']
-              rubysl-securerandom: ['2.0.0']
+              'aws-sdk-sqs': ['1.10.0']
+              'aws-sdk-sns': ['1.9.0']
+              'aws-sdk-s3': ['1.30.1']
+              daemons: ['1.2.6']
+              'rubysl-securerandom': ['2.0.0']
           files:
             '/opt/aws-s3-virusscan/daemon.rb':
               content: |
@@ -604,7 +664,9 @@ Resources:
             '/opt/aws-s3-virusscan/worker.rb':
               content: |
                 #!/usr/bin/env ruby
-                require 'aws-sdk'
+                require 'aws-sdk-sqs'
+                require 'aws-sdk-sns'
+                require 'aws-sdk-s3'
                 require 'json'
                 require 'uri'
                 require 'yaml'
@@ -812,7 +874,7 @@ Resources:
                 - '/opt/aws-s3-virusscan/worker.rb'
                 - '/opt/aws-s3-virusscan/s3-virusscan.conf'
                 - '/etc/init.d/s3-virusscan'
-              'clamd.scan':
+              'clamd@scan':
                 enabled: true
                 ensureRunning: true
                 packages:
@@ -820,6 +882,9 @@ Resources:
                   - clamd
                 files:
                 - '/etc/clamd.conf'
+              amazon-ssm-agent:
+                enabled: !If [HasSystemsManagerAccess, true, false]
+                ensureRunning: !If [HasSystemsManagerAccess, true, false]
               'cfn-hup':
                 enabled: true
                 ensureRunning: true

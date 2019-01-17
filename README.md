@@ -25,8 +25,8 @@ A picture is worth a thousand words:
 ## Installation
 
 ### Create the CloudFormation Stack
-1. This templates depends on our [`vpc-*azs.yaml`](https://github.com/widdix/aws-cf-templates/tree/master/vpc) template. The scanners will will use 2 AZs only. <a href="https://console.aws.amazon.com/cloudformation/home#/stacks/new?stackName=vpc-2azs&templateURL=https://s3-eu-west-1.amazonaws.com/widdix-aws-cf-templates/vpc/vpc-2azs.yaml">Launch Stack</a>
-1. <a href="https://console.aws.amazon.com/cloudformation/home#/stacks/new?stackName=s3-virusscan&templateURL=https://s3-eu-west-1.amazonaws.com/widdix-aws-s3-virusscan/template.yaml">Launch Stack</a>
+1. This templates depends on one of our [`vpc-*azs.yaml`](https://templates.cloudonaut.io/en/stable/vpc/) templates. [![Launch Stack](./img/launch-stack.png)](https://console.aws.amazon.com/cloudformation/home#/stacks/create/review?templateURL=https://s3-eu-west-1.amazonaws.com/widdix-aws-cf-templates-releases-eu-west-1/stable/vpc/vpc-2azs.yaml&stackName=vpc)
+1. [![Launch Stack](./img/launch-stack.png)](https://console.aws.amazon.com/cloudformation/home#/stacks/create/review?templateURL=https://s3-eu-west-1.amazonaws.com/widdix-aws-s3-virusscan/template.yaml&stackName=s3-virusscan&param_ParentVPCStack=vpc)
 1. Click **Next** to proceed with the next step of the wizard.
 1. Specify a name and all parameters for the stack.
 1. Click **Next** to proceed with the next step of the wizard.
@@ -69,6 +69,13 @@ X5O!P%@AP[4\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*
 ```
 
 and upload that file to your S3 bucket.
+
+## Troubleshooting
+
+1. Go to [CloudWatcg Logs in the AWS Management Console](https://console.aws.amazon.com/cloudwatch/home#logs:)
+2. Click on the log group of the s3-virusscan
+3. Click on the blue **Search Log Group** button
+4. Search for `"s3-virusscan["`
 
 ## Known issues / limitations
 
