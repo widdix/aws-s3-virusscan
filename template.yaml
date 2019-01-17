@@ -284,13 +284,13 @@ Resources:
       - Key: Name
         Value: !Ref 'AWS::StackName'
         PropagateAtLaunch: true
-    #CreationPolicy:
-    #  ResourceSignal:
-    #    Timeout: PT10M
-    #UpdatePolicy:
-    #  AutoScalingRollingUpdate:
-    #    PauseTime: PT10M
-    #    WaitOnResourceSignals: true
+    CreationPolicy:
+      ResourceSignal:
+        Timeout: PT10M
+    UpdatePolicy:
+      AutoScalingRollingUpdate:
+        PauseTime: PT10M
+        WaitOnResourceSignals: true
   ScanScaleUp:
     Type: 'AWS::AutoScaling::ScalingPolicy'
     Properties:
