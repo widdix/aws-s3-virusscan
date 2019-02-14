@@ -72,7 +72,7 @@ and upload that file to your S3 bucket.
 
 ## Troubleshooting
 
-1. Go to [CloudWatcg Logs in the AWS Management Console](https://console.aws.amazon.com/cloudwatch/home#logs:)
+1. Go to [CloudWatch Logs in the AWS Management Console](https://console.aws.amazon.com/cloudwatch/home#logs:)
 2. Click on the log group of the s3-virusscan
 3. Click on the blue **Search Log Group** button
 4. Search for `"s3-virusscan["`
