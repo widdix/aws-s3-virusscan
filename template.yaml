@@ -682,7 +682,7 @@ Resources:
                   NO_STATUS = 'no'
                   CLEAN_STATUS = 'clean'
                   INFECTED_STATUS = 'infected'
-                  
+
                   NO_ACTION = 'no'
                   TAG_ACTION = 'tag'
                   DELETE_ACTION = 'delete'
