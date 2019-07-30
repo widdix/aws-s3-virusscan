@@ -82,3 +82,4 @@ and upload that file to your S3 bucket.
 * It was [reported](https://github.com/widdix/aws-s3-virusscan/issues/12) that the solution does not run on a t2.micro or smaller. Use at least a t2.small instance.
 * In versioned buckets only the latest version of an object will be scanned. If you upload multiple versions of the same file quickly after another, chances are high that some versions are not scanned.
 * An initial scan may also be useful but is not performed at the moment. This could be implemented with a Lambda function that pushes every key to SQS.
+* configure logrotate
