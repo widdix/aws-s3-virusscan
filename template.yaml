@@ -677,8 +677,13 @@ Resources:
 
                   attr_reader :log, :conf, :sns, :tag_key, :clean_tag_set, :infected_tag_set
 
+                  NO_STATUS = 'no'
                   CLEAN_STATUS = 'clean'
                   INFECTED_STATUS = 'infected'
+                  
+                  NO_ACTION = 'no'
+                  TAG_ACTION = 'tag'
+                  DELETE_ACTION = 'delete'
 
                   def initialize
                     @log = Syslog::Logger.new 's3-virusscan'
@@ -696,6 +701,8 @@ Resources:
                     s3 = Aws::S3::Client.new()
                     poller = Aws::SQS::QueuePoller.new(conf['queue'])
 
+                    max_size = conf['volume_size'] * 1073741824 / 2 # in bytes
+
                     poller.poll do |msg|
                       begin
                         body = JSON.parse(msg.body)
@@ -704,7 +711,12 @@ Resources:
                             bucket = record['s3']['bucket']['name']
                             key = URI.decode(record['s3']['object']['key']).gsub('+', ' ')
                             fileName = "/tmp/#{SecureRandom.uuid}"
-                            log.debug "scanning s3://#{bucket}/#{key}..."
+                            if record['s3']['object']['size'] > max_size
+                              log.info "s3://#{bucket}/#{key} bigger than half of the EBS volume, skip"
+                              publish_notification(bucket, key, NO_STATUS, NO_ACTION);
+                              next
+                            end
+                            log.debug "downloading s3://#{bucket}/#{key}..."
                             begin
                               s3.get_object(
                                 response_target: fileName,
@@ -712,39 +724,49 @@ Resources:
                                 key: key
                               )
                             rescue Aws::S3::Errors::NoSuchKey
-                              log.debug "s3://#{bucket}/#{key} does no longer exist"
+                              log.info "s3://#{bucket}/#{key} does no longer exist, skip"
                               next
                             end
                             begin
+                              log.info "scanning s3://#{bucket}/#{key}..."
                               system("clamdscan #{fileName}")
                               exitstatus = $?.exitstatus
                               if exitstatus == 0 # No virus found.
-                                if conf['report_clean']
-                                  publish_notification(bucket, key, CLEAN_STATUS);
-                                else
-                                  log.debug "s3://#{bucket}/#{key} is clean"
-                                end
                                 if conf['tag_files']
+                                  log.debug "s3://#{bucket}/#{key} is clean (tagging)"
                                   s3.put_object_tagging({
                                       bucket: bucket,
                                       key: key,
                                       tagging: clean_tag_set
                                   })
+                                  if conf['report_clean']
+                                    publish_notification(bucket, key, CLEAN_STATUS, TAG_ACTION);
+                                  end
+                                else
+                                  log.debug "s3://#{bucket}/#{key} is clean"
+                                  if conf['report_clean']
+                                    publish_notification(bucket, key, CLEAN_STATUS, NO_ACTION);
+                                  end
                                 end
                               elsif exitstatus == 1 # Virus(es) found.
-                                publish_notification(bucket, key, INFECTED_STATUS);
                                 if conf['delete']
+                                  log.debug "s3://#{bucket}/#{key} is infected (deleting)"
                                   s3.delete_object(
                                     bucket: bucket,
                                     key: key
                                   )
-                                  log.debug "s3://#{bucket}/#{key} was deleted"
+                                  publish_notification(bucket, key, INFECTED_STATUS, DELETE_ACTION);
                                 elsif conf['tag_files']
+                                  log.debug "s3://#{bucket}/#{key} is infected (tagging)"
                                   s3.put_object_tagging({
                                       bucket: bucket,
                                       key: key,
                                       tagging: infected_tag_set
                                   })
+                                  publish_notification(bucket, key, INFECTED_STATUS, TAG_ACTION);
+                                else
+                                  log.debug "s3://#{bucket}/#{key} is infected"
+                                  publish_notification(bucket, key, INFECTED_STATUS, NONE_ACTION);
                                 end
                               else # An error occured.
                                 raise "s3://#{bucket}/#{key} could not be scanned, clamdscan exit status was #{exitstatus}, retry"
@@ -763,17 +785,16 @@ Resources:
 
                   private
 
-                  def publish_notification(bucket, key, status)
-                    msg = "s3://#{bucket}/#{key} is #{status}"
-                    if status == INFECTED_STATUS and conf['delete']
-                      msg << ", deleting..."
-                    end
-                    log.debug msg
+                  def publish_notification(bucket, key, status, action)
                     sns.publish(
                       topic_arn: conf['topic'],
-                      message: msg,
+                      message: "s3://#{bucket}/#{key} is #{status}, #{action} action executed",
                       subject: "s3-virusscan s3://#{bucket}",
                       message_attributes: {
+                        "bucket" => {
+                          data_type: "String",
+                          string_value: bucket
+                        },
                         "key" => {
                           data_type: "String",
                           string_value: key
@@ -781,6 +802,10 @@ Resources:
                         "status" => {
                           data_type: "String",
                           string_value: status
+                        },
+                        "action" => {
+                          data_type: "String",
+                          string_value: action
                         }
                       }
                     )
@@ -802,6 +827,7 @@ Resources:
                 region: ${AWS::Region}
                 queue: ${ScanQueue}
                 topic: ${FindingsTopic}
+                volume_size: ${VolumeSize}
               mode: '000644'
               owner: root
               group: root
