@@ -659,7 +659,7 @@ Resources:
               content: |
                 #!/usr/bin/env ruby
                 require 'daemons'
-                Daemons.run(__dir__ + '/worker.rb', {:monitor => true, :log_output_syslog => true})
+                Daemons.run(__dir__ + '/worker.rb', {:app_name => 's3-virusscan', :monitor => true, :dir_mode => :system, :log_output_syslog => true})
               mode: '000744'
               owner: root
               group: root
@@ -675,9 +675,11 @@ Resources:
                 require 'syslog/logger'
                 require 'securerandom'
 
-                class ClamScanWorker
+                $log = Syslog::Logger.new 's3-virusscan'
 
-                  attr_reader :log, :conf, :sns, :tag_key, :clean_tag_set, :infected_tag_set
+                class Worker
+
+                  attr_reader :conf, :sns, :tag_key, :clean_tag_set, :infected_tag_set
 
                   NO_STATUS = 'no'
                   CLEAN_STATUS = 'clean'
@@ -688,7 +690,6 @@ Resources:
                   DELETE_ACTION = 'delete'
 
                   def initialize
-                    @log = Syslog::Logger.new 's3-virusscan'
                     @conf = YAML::load_file(__dir__ + '/s3-virusscan.conf')
                     Aws.config.update(region: conf['region'])
                     @tag_key = conf['tag_key']
@@ -697,8 +698,8 @@ Resources:
                     @sns = Aws::SNS::Client.new()
                   end
 
-                  def perform
-                    log.info "s3-virusscan started"
+                  def run
+                    $log.info "s3-virusscan started"
 
                     s3 = Aws::S3::Client.new()
                     poller = Aws::SQS::QueuePoller.new(conf['queue'])
@@ -714,11 +715,11 @@ Resources:
                             key = URI.decode(record['s3']['object']['key']).gsub('+', ' ')
                             fileName = "/tmp/#{SecureRandom.uuid}"
                             if record['s3']['object']['size'] > max_size
-                              log.info "s3://#{bucket}/#{key} bigger than half of the EBS volume, skip"
+                              $log.info "s3://#{bucket}/#{key} bigger than half of the EBS volume, skip"
                               publish_notification(bucket, key, NO_STATUS, NO_ACTION);
                               next
                             end
-                            log.debug "downloading s3://#{bucket}/#{key}..."
+                            $log.debug "downloading s3://#{bucket}/#{key}..."
                             begin
                               s3.get_object(
                                 response_target: fileName,
@@ -726,16 +727,16 @@ Resources:
                                 key: key
                               )
                             rescue Aws::S3::Errors::NoSuchKey
-                              log.info "s3://#{bucket}/#{key} does no longer exist, skip"
+                              $log.info "s3://#{bucket}/#{key} does no longer exist, skip"
                               next
                             end
                             begin
-                              log.info "scanning s3://#{bucket}/#{key}..."
+                              $log.info "scanning s3://#{bucket}/#{key}..."
                               system("clamdscan #{fileName}")
                               exitstatus = $?.exitstatus
                               if exitstatus == 0 # No virus found.
                                 if conf['tag_files']
-                                  log.debug "s3://#{bucket}/#{key} is clean (tagging)"
+                                  $log.debug "s3://#{bucket}/#{key} is clean (tagging)"
                                   s3.put_object_tagging({
                                       bucket: bucket,
                                       key: key,
@@ -745,21 +746,21 @@ Resources:
                                     publish_notification(bucket, key, CLEAN_STATUS, TAG_ACTION);
                                   end
                                 else
-                                  log.debug "s3://#{bucket}/#{key} is clean"
+                                  $log.debug "s3://#{bucket}/#{key} is clean"
                                   if conf['report_clean']
                                     publish_notification(bucket, key, CLEAN_STATUS, NO_ACTION);
                                   end
                                 end
                               elsif exitstatus == 1 # Virus(es) found.
                                 if conf['delete']
-                                  log.debug "s3://#{bucket}/#{key} is infected (deleting)"
+                                  $log.debug "s3://#{bucket}/#{key} is infected (deleting)"
                                   s3.delete_object(
                                     bucket: bucket,
                                     key: key
                                   )
                                   publish_notification(bucket, key, INFECTED_STATUS, DELETE_ACTION);
                                 elsif conf['tag_files']
-                                  log.debug "s3://#{bucket}/#{key} is infected (tagging)"
+                                  $log.debug "s3://#{bucket}/#{key} is infected (tagging)"
                                   s3.put_object_tagging({
                                       bucket: bucket,
                                       key: key,
@@ -767,7 +768,7 @@ Resources:
                                   })
                                   publish_notification(bucket, key, INFECTED_STATUS, TAG_ACTION);
                                 else
-                                  log.debug "s3://#{bucket}/#{key} is infected"
+                                  $log.debug "s3://#{bucket}/#{key} is infected"
                                   publish_notification(bucket, key, INFECTED_STATUS, NONE_ACTION);
                                 end
                               else # An error occured.
@@ -779,7 +780,7 @@ Resources:
                           end
                         end
                       rescue Exception => e
-                        log.error "message failed: #{e.inspect} #{msg.inspect}"
+                        $log.error "message failed: #{e.inspect} #{msg.inspect}"
                         raise e
                       end
                     end
@@ -815,8 +816,12 @@ Resources:
 
                 end
 
-                # do some work
-                ClamScanWorker.new.perform
+                begin
+                  Worker.new.run
+                rescue Exception => e
+                  $log.error "worker failed: #{e.inspect}"
+                  raise e
+                end
               mode: '000744'
               owner: root
               group: root
