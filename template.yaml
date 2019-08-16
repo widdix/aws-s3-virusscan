@@ -410,7 +410,9 @@ Resources:
         Version: '2012-10-17'
         Statement:
         - Effect: Allow
-          Action: 's3:PutObjectTagging'
+          Action:
+          - 's3:PutObjectTagging'
+          - 's3:PutObjectVersionTagging'
           Resource: !Ref S3ObjectRestriction
           Condition:
             'ForAllValues:StringLike':
@@ -679,7 +681,7 @@ Resources:
 
                 class Worker
 
-                  attr_reader :conf, :sns, :tag_key, :clean_tag_set, :infected_tag_set
+                  attr_reader :conf, :sns, :s3, :tag_key
 
                   NO_STATUS = 'no'
                   CLEAN_STATUS = 'clean'
@@ -693,15 +695,13 @@ Resources:
                     @conf = YAML::load_file(__dir__ + '/s3-virusscan.conf')
                     Aws.config.update(region: conf['region'])
                     @tag_key = conf['tag_key']
-                    @clean_tag_set = {tag_set: [{key: tag_key, value: CLEAN_STATUS}]}
-                    @infected_tag_set = {tag_set: [{key: tag_key, value: INFECTED_STATUS}]}
                     @sns = Aws::SNS::Client.new()
+                    @s3 = Aws::S3::Client.new()
                   end
 
                   def run
                     $log.info "s3-virusscan started"
 
-                    s3 = Aws::S3::Client.new()
                     poller = Aws::SQS::QueuePoller.new(conf['queue'])
 
                     max_size = conf['volume_size'] * 1073741824 / 2 # in bytes
@@ -709,70 +709,73 @@ Resources:
                     poller.poll do |msg|
                       begin
                         body = JSON.parse(msg.body)
+                        $log.debug "body #{body}"
                         if body.key?('Records')
                           body['Records'].each do |record|
                             bucket = record['s3']['bucket']['name']
                             key = URI.decode(record['s3']['object']['key']).gsub('+', ' ')
+                            version = record['s3']['object']['versionId']
                             fileName = "/tmp/#{SecureRandom.uuid}"
                             if record['s3']['object']['size'] > max_size
-                              $log.info "s3://#{bucket}/#{key} bigger than half of the EBS volume, skip"
-                              publish_notification(bucket, key, NO_STATUS, NO_ACTION);
+                              $log.info "s3://#{bucket}/#{key} #{version} bigger than half of the EBS volume, skip"
+                              if conf['tag_files']
+                                tag(bucket, key, version, NO_STATUS);
+                              end
+                              publish_notification(bucket, key, version, NO_STATUS, NO_ACTION);
                               next
                             end
-                            $log.debug "downloading s3://#{bucket}/#{key}..."
+                            $log.debug "downloading s3://#{bucket}/#{key} #{version}..."
                             begin
-                              s3.get_object(
-                                response_target: fileName,
-                                bucket: bucket,
-                                key: key
-                              )
+                              if version
+                                s3.get_object(
+                                  response_target: fileName,
+                                  bucket: bucket,
+                                  key: key
+                                )
+                              else
+                                s3.get_object(
+                                  response_target: fileName,
+                                  bucket: bucket,
+                                  key: key,
+                                  version_id: version
+                                )
+                              end
                             rescue Aws::S3::Errors::NoSuchKey
-                              $log.info "s3://#{bucket}/#{key} does no longer exist, skip"
+                              $log.info "s3://#{bucket}/#{key} #{version} does no longer exist, skip"
                               next
                             end
                             begin
-                              $log.info "scanning s3://#{bucket}/#{key}..."
+                              $log.info "scanning s3://#{bucket}/#{key} #{version}..."
                               system("clamdscan #{fileName}")
                               exitstatus = $?.exitstatus
                               if exitstatus == 0 # No virus found.
                                 if conf['tag_files']
-                                  $log.debug "s3://#{bucket}/#{key} is clean (tagging)"
-                                  s3.put_object_tagging({
-                                      bucket: bucket,
-                                      key: key,
-                                      tagging: clean_tag_set
-                                  })
-                                  if conf['report_clean']
-                                    publish_notification(bucket, key, CLEAN_STATUS, TAG_ACTION);
-                                  end
+                                  $log.debug "s3://#{bucket}/#{key} #{version} is clean (tagging)"
+                                  tag(bucket, key, version, CLEAN_STATUS);
                                 else
-                                  $log.debug "s3://#{bucket}/#{key} is clean"
-                                  if conf['report_clean']
-                                    publish_notification(bucket, key, CLEAN_STATUS, NO_ACTION);
-                                  end
+                                  $log.debug "s3://#{bucket}/#{key} #{version} is clean"
+                                end
+                                if conf['report_clean']
+                                  publish_notification(bucket, key, version, CLEAN_STATUS, NO_ACTION);
                                 end
                               elsif exitstatus == 1 # Virus(es) found.
                                 if conf['delete']
-                                  $log.debug "s3://#{bucket}/#{key} is infected (deleting)"
+                                  $log.debug "s3://#{bucket}/#{key} #{version} is infected (deleting)"
                                   s3.delete_object(
                                     bucket: bucket,
                                     key: key
                                   )
-                                  publish_notification(bucket, key, INFECTED_STATUS, DELETE_ACTION);
+                                  publish_notification(bucket, key, version, INFECTED_STATUS, DELETE_ACTION);
                                 elsif conf['tag_files']
-                                  $log.debug "s3://#{bucket}/#{key} is infected (tagging)"
-                                  s3.put_object_tagging({
-                                      bucket: bucket,
-                                      key: key,
-                                      tagging: infected_tag_set
-                                  })
-                                  publish_notification(bucket, key, INFECTED_STATUS, TAG_ACTION);
+                                  $log.debug "s3://#{bucket}/#{key} #{version} is infected (tagging)"
+                                  tag(bucket, key, version, INFECTED_STATUS);
+                                  publish_notification(bucket, key, version, INFECTED_STATUS, TAG_ACTION);
                                 else
-                                  $log.debug "s3://#{bucket}/#{key} is infected"
-                                  publish_notification(bucket, key, INFECTED_STATUS, NONE_ACTION);
+                                  $log.debug "s3://#{bucket}/#{key} #{version} is infected"
+                                  publish_notification(bucket, key, version, INFECTED_STATUS, NONE_ACTION);
                                 end
                               else # An error occured.
-                                raise "s3://#{bucket}/#{key} could not be scanned, clamdscan exit status was #{exitstatus}, retry"
+                                raise "s3://#{bucket}/#{key} #{version} could not be scanned, clamdscan exit status was #{exitstatus}, retry"
                               end
                             ensure
                               system("rm #{fileName}")
@@ -788,29 +791,53 @@ Resources:
 
                   private
 
-                  def publish_notification(bucket, key, status, action)
+                  def tag(bucket, key, version, status)
+                    if version
+                      s3.put_object_tagging(
+                        bucket: bucket,
+                        key: key,
+                        version_id: version,
+                        tagging: {tag_set: [{key: tag_key, value: status}]}
+                      )
+                    else
+                      s3.put_object_tagging(
+                        bucket: bucket,
+                        key: key,
+                        tagging: {tag_set: [{key: tag_key, value: status}]}
+                      )
+                    end
+                  end
+
+                  def publish_notification(bucket, key, version, status, action)
+                    message_attributes = {
+                      "bucket" => {
+                        data_type: "String",
+                        string_value: bucket
+                      },
+                      "key" => {
+                        data_type: "String",
+                        string_value: key
+                      },
+                      "status" => {
+                        data_type: "String",
+                        string_value: status
+                      },
+                      "action" => {
+                        data_type: "String",
+                        string_value: action
+                      }
+                    }
+                    if version
+                      message_attributes[:version] = {
+                        data_type: "String",
+                        string_value: version
+                      }
+                    end
                     sns.publish(
                       topic_arn: conf['topic'],
-                      message: "s3://#{bucket}/#{key} is #{status}, #{action} action executed",
+                      message: "s3://#{bucket}/#{key} #{version} is #{status}, #{action} action executed",
                       subject: "s3-virusscan s3://#{bucket}",
-                      message_attributes: {
-                        "bucket" => {
-                          data_type: "String",
-                          string_value: bucket
-                        },
-                        "key" => {
-                          data_type: "String",
-                          string_value: key
-                        },
-                        "status" => {
-                          data_type: "String",
-                          string_value: status
-                        },
-                        "action" => {
-                          data_type: "String",
-                          string_value: action
-                        }
-                      }
+                      message_attributes: message_attributes
                     )
                   end
 
