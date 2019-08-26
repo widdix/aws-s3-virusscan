@@ -210,6 +210,7 @@ Resources:
       Period: 300
       Statistic: Maximum
       Threshold: 0
+      TreatMissingData: notBreaching
   ScanQueueEmptyAlarm:
     Type: 'AWS::CloudWatch::Alarm'
     Properties:
@@ -225,6 +226,7 @@ Resources:
       Period: 300
       Statistic: Maximum
       Threshold: 0
+      TreatMissingData: notBreaching
   ScanQueuePolicy:
     Type: 'AWS::SQS::QueuePolicy'
     Properties:
@@ -258,6 +260,7 @@ Resources:
       ComparisonOperator: GreaterThanOrEqualToThreshold
       AlarmActions:
       - !Ref FindingsTopic
+      TreatMissingData: notBreaching
   ScanQueueOldMessagesAlarm:
     Type: 'AWS::CloudWatch::Alarm'
     Properties:
@@ -274,6 +277,7 @@ Resources:
       ComparisonOperator: GreaterThanOrEqualToThreshold
       AlarmActions:
       - !Ref FindingsTopic
+      TreatMissingData: notBreaching
   ScanAutoScalingGroup:
     Type: 'AWS::AutoScaling::AutoScalingGroup'
     Properties:
