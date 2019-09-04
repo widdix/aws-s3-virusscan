@@ -19,7 +19,7 @@ Antivirus for S3 buckets. You can connect as many buckets as you like by using [
 * Security Hub Integration
 * SSM OpsCenter Integration
 
-> The [S3 VirusScan](https://s3-virusscan.widdix.net/) with additional integrations is available in the [AWS Marketplace](https://aws.amazon.com/marketplace/pp/B07XFR781T).
+The [S3 VirusScan](https://s3-virusscan.widdix.net/) with additional integrations is available in the [AWS Marketplace](https://aws.amazon.com/marketplace/pp/B07XFR781T).
 
 ## How does it work
 
