@@ -2,6 +2,8 @@
 
 Antivirus for S3 buckets. You can connect as many buckets as you like by using [S3 Event Notifications](http://docs.aws.amazon.com/AmazonS3/latest/dev/NotificationHowTo.html)
 
+> The [S3 VirusScan](https://s3-virusscan.widdix.net/) with additional integrations is available in the [AWS Marketplace](https://aws.amazon.com/marketplace/pp/B07XFR781T).
+
 ## Features
 
 * Uses ClamAV to scan newly added files on S3 buckets
@@ -10,6 +12,14 @@ Antivirus for S3 buckets. You can connect as many buckets as you like by using [
 * Publishes a message to SNS in case of a finding
 * Can optionally delete compromised files automatically
 * Logs to CloudWatch Logs
+
+## Commercial Features
+
+* CloudWatch Integration (Metrics and Dashboard)
+* Security Hub Integration
+* SSM OpsCenter Integration
+
+> The [S3 VirusScan](https://s3-virusscan.widdix.net/) with additional integrations is available in the [AWS Marketplace](https://aws.amazon.com/marketplace/pp/B07XFR781T).
 
 ## How does it work
 
@@ -52,6 +62,8 @@ If you like to receive emails if a virus was found you must subscribe to the SNS
 ![Subscribe Topic: Step 2](./docs/subscribe_topic_step2.png?raw=true "Subscribe Topic: Step 2")
 
 You will receive a confirmation email.
+
+> The [S3 VirusScan](https://s3-virusscan.widdix.net/) with additional integrations is available in the [AWS Marketplace](https://aws.amazon.com/marketplace/pp/B07XFR781T).
 
 ## Test
 
