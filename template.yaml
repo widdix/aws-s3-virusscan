@@ -930,6 +930,12 @@ Resources:
               test: '[ ! -f /etc/clamd.conf ]'
             f_update_clamav_db:
               command: freshclam
+            g_systemctl_enable_clamd:
+              command: 'systemctl enable clamd@scan'
+              test: '! systemctl is-enabled clamd@scan'
+            h_systemctl_start_clamd:
+              command: 'systemctl start clamd@scan'
+              test: '! systemctl is-active clamd@scan'
           services:
             sysvinit:
               's3-virusscan':
@@ -940,14 +946,6 @@ Resources:
                 - '/opt/aws-s3-virusscan/worker.rb'
                 - '/opt/aws-s3-virusscan/s3-virusscan.conf'
                 - '/etc/init.d/s3-virusscan'
-              'clamd@scan':
-                enabled: true
-                ensureRunning: true
-                packages:
-                  yum:
-                  - clamd
-                files:
-                - '/etc/clamd.conf'
               amazon-ssm-agent:
                 enabled: !If [HasSystemsManagerAccess, true, false]
                 ensureRunning: !If [HasSystemsManagerAccess, true, false]
