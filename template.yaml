@@ -360,13 +360,14 @@ Resources:
           Version: '2012-10-17'
           Statement:
           - Effect: Allow
-            Action:
-            - 's3:GetObject*'
+            Action: 's3:GetObject*'
             Resource: !Ref S3ObjectRestriction
           - Effect: Allow
-            Action:
-            - 's3:ListBucket*'
+            Action: 's3:ListBucket*'
             Resource: !Ref S3BucketRestriction
+          - Effect: Allow
+            Action: 'kms:Decrypt'
+            Resource: '*'
       - PolicyName: sqs
         PolicyDocument:
           Version: '2012-10-17'
@@ -402,8 +403,7 @@ Resources:
         Version: '2012-10-17'
         Statement:
         - Effect: Allow
-          Action:
-          - 's3:DeleteObject*'
+          Action: 's3:DeleteObject*'
           Resource: !Ref S3ObjectRestriction
       PolicyName: s3delete
       Roles:
