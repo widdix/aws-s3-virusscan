@@ -549,7 +549,7 @@ Resources:
                            "log_group_name": "${Logs}",
                            "file_path": "/var/log/cron",
                            "log_stream_name": "{instance_id}/var/log/cron",
-                           "timestamp_format": "%b %d %H:%M:%S"
+                           "timestamp_format": "%b %-d %H:%M:%S"
                         }, {
                            "log_group_name": "${Logs}",
                            "file_path": "/var/log/dmesg",
@@ -562,17 +562,17 @@ Resources:
                            "log_group_name": "${Logs}",
                            "file_path": "/var/log/maillog",
                            "log_stream_name": "{instance_id}/var/log/maillog",
-                           "timestamp_format": "%b %d %H:%M:%S"
+                           "timestamp_format": "%b %-d %H:%M:%S"
                         }, {
                            "log_group_name": "${Logs}",
                            "file_path": "/var/log/messages",
                            "log_stream_name": "{instance_id}/var/log/messages",
-                           "timestamp_format": "%b %d %H:%M:%S"
+                           "timestamp_format": "%b %-d %H:%M:%S"
                         }, {
                            "log_group_name": "${Logs}",
                            "file_path": "/var/log/secure",
                            "log_stream_name": "{instance_id}/var/log/secure",
-                           "timestamp_format": "%b %d %H:%M:%S"
+                           "timestamp_format": "%b %-d %H:%M:%S"
                         }, {
                            "log_group_name": "${Logs}",
                            "file_path": "/var/log/yum.log",
