@@ -46,6 +46,7 @@ Metadata:
       - SpotPrice
       - LogsRetentionInDays
       - VolumeSize
+      - SwapSize
 Parameters:
   ParentVPCStack:
     Description: 'Stack name of parent VPC stack based on vpc/vpc-*azs.yaml template.'
@@ -133,12 +134,19 @@ Parameters:
     Default: 14
     AllowedValues: [1, 3, 5, 7, 14, 30, 60, 90, 120, 150, 180, 365, 400, 545, 731, 1827, 3653]
   VolumeSize:
-    Description: 'The size of the volume, in gibibytes (GiBs). You can only scan files that are smaller than helf of this value.'
+    Description: 'The size of the volume, in gibibytes (GiBs). You can only scan files that are smaller than half of this value.'
     Type: Number
-    Default: 8
+    Default: 16
     ConstraintDescription: 'Must be in the range [8-1024]'
     MinValue: 8
     MaxValue: 1024
+  SwapSize:
+    Description: 'The size of the SWAP area (neeeds to fit into VolumeSize).'
+    Type: Number
+    Default: 2
+    ConstraintDescription: 'Must be in the range [0-8]'
+    MinValue: 0
+    MaxValue: 8
 Conditions:
   HasSSHBastionSecurityGroup: !Not [!Equals [!Ref ParentSSHBastionStack, '']]
   HasKeyName: !Not [!Equals [!Ref KeyName, '']]
@@ -148,6 +156,7 @@ Conditions:
   HasDeleteInfectedFiles: !Equals [!Ref DeleteInfectedFiles, 'true']
   HasTagFiles: !Equals [!Ref TagFiles, 'true']
   HasSpotPrice: !Not [!Equals [!Ref SpotPrice, '']]
+  HasSwapSize: !Not [!Equals [!Ref SwapSize, '0']]
 Mappings:
   RegionMap:
     'eu-north-1':
@@ -283,7 +292,6 @@ Resources:
   ScanAutoScalingGroup:
     Type: 'AWS::AutoScaling::AutoScalingGroup'
     Properties:
-
       LaunchConfigurationName: !Ref ScanLaunchConfiguration
       MaxSize: !Ref AutoScalingMaxSize
       MinSize: !Ref AutoScalingMinSize
@@ -463,7 +471,12 @@ Resources:
     Metadata:
       'AWS::CloudFormation::Init':
         configSets:
-          default: !If [HasIAMUserSSHAccess, [cloudwatch, ssh-access, extras1, extras2, config], [cloudwatch, extras1, extras2, config]]
+          default: [!If [HasSwapSize, swap, !Ref 'AWS::NoValue'], cloudwatch, !If [HasIAMUserSSHAccess, ssh-access, !Ref 'AWS::NoValue'], extras1, extras2, config]
+        swap:
+          commands:
+            'a_setup':
+              command: !Sub 'fallocate -l ${SwapSize}G /swapfile && chmod 600 /swapfile && mkswap /swapfile && swapon /swapfile'
+              test: '[ ! -f /swapfile ]'
         cloudwatch:
           packages:
             rpm:
