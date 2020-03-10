@@ -403,6 +403,9 @@ Resources:
               StringEquals:
                 'cloudwatch:namespace': !Ref 'AWS::StackName'
           - Effect: Allow
+            Action: 'ec2:DescribeTags'
+            Resource: '*'
+          - Effect: Allow
             Action:
             - 'logs:CreateLogGroup'
             - 'logs:CreateLogStream'
@@ -585,7 +588,7 @@ Resources:
                   "metrics": {
                     "namespace": "${AWS::StackName}",
                     "append_dimensions": {
-                      "InstanceId": "${!aws:InstanceId}"
+                      "AutoScalingGroupName": "${!aws:AutoScalingGroupName}"
                     },
                     "metrics_collected": {
                       "mem": {
