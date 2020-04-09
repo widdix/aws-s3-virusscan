@@ -65,23 +65,6 @@ You will receive a confirmation email.
 
 > The [S3 VirusScan](https://s3-virusscan.widdix.net/) with additional integrations is available in the [AWS Marketplace](https://aws.amazon.com/marketplace/pp/B07XFR781T).
 
-## Test
-
-### Extensive test
-
-Thanks to [Objective-See](https://objective-see.com/) for providing infected files that we use for testing. Download one of the files upload it to your S3 bucket for testing.
-We also have automated tests in place!
-
-### Simple test
-
-Create a [EICAR Standard Anti-Virus Test File](https://en.wikipedia.org/wiki/EICAR_test_file) with the following content:
-
-```
-X5O!P%@AP[4\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*
-```
-
-and upload that file to your S3 bucket.
-
 ## Troubleshooting
 
 1. Go to [CloudWatch Logs in the AWS Management Console](https://console.aws.amazon.com/cloudwatch/home#logs:)
