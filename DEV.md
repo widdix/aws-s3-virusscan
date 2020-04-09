@@ -48,3 +48,20 @@ cd loadtest/
 for i in {1..10000}; do touch "file${i}.txt"; done
 aws s3 sync . s3://bucketname
 ```
+
+## Test
+
+### Extensive test
+
+Thanks to [Objective-See](https://objective-see.com/) for providing infected files that we use for testing. Download one of the files upload it to your S3 bucket for testing.
+We also have automated tests in place!
+
+### Simple test
+
+Create a [EICAR Standard Anti-Virus Test File](https://en.wikipedia.org/wiki/EICAR_test_file) with the following content:
+
+```
+X5O!P%@AP[4\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*
+```
+
+and upload that file to your S3 bucket.
