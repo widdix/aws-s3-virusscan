@@ -246,9 +246,12 @@ Resources:
         Statement:
         - Effect: Allow
           Principal:
-            AWS: '*' # FIXME security issue that can not be solved??? https://twitter.com/hellomichibye/status/1214997715152715778
+            Service: 's3.amazonaws.com'
           Action: 'SQS:SendMessage'
           Resource: !GetAtt 'ScanQueue.Arn'
+          Condition:
+            StringEquals:
+              'aws:SourceAccount': !Ref 'AWS::AccountId'
       Queues:
       - !Ref ScanQueue
   ScanQueueDLQ:
