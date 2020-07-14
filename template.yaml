@@ -773,7 +773,7 @@ Resources:
                         if body.key?('Records')
                           body['Records'].each do |record|
                             bucket = record['s3']['bucket']['name']
-                            key = URI.decode(record['s3']['object']['key']).gsub('+', ' ')
+                            key = URI.decode_www_form_component(record['s3']['object']['key'])
                             version = record['s3']['object']['versionId']
                             fileName = "/tmp/#{SecureRandom.uuid}"
                             if record['s3']['object']['size'] > max_size
