@@ -159,42 +159,46 @@ Conditions:
   HasSwapSize: !Not [!Equals [!Ref SwapSize, '0']]
 Mappings:
   RegionMap:
+    'af-south-1':
+      AMI: 'ami-0cec12e29ebe3f0d5'
     'eu-north-1':
-      AMI: 'ami-074a0e4318181e9d9'
+      AMI: 'ami-0653812935d0743fe'
     'ap-south-1':
-      AMI: 'ami-0d9462a653c34dab7'
+      AMI: 'ami-0e306788ff2473ccb'
     'eu-west-3':
-      AMI: 'ami-0fd9bce3a3384b635'
+      AMI: 'ami-0de12f76efe134f2f'
     'eu-west-2':
-      AMI: 'ami-0389b2a3c4948b1a0'
+      AMI: 'ami-0a669382ea0feb73a'
+    'eu-south-1':
+      AMI: 'ami-0759301b88845d121'
     'eu-west-1':
-      AMI: 'ami-099a8245f5daa82bf'
+      AMI: 'ami-0bb3fad3c0286ebd5'
     'ap-northeast-2':
-      AMI: 'ami-0a93a08544874b3b7'
+      AMI: 'ami-03b42693dc6a7dc35'
     'me-south-1':
-      AMI: 'ami-0e0e68bcf15b6f5cd'
+      AMI: 'ami-08155c9ee8b845e35'
     'ap-northeast-1':
-      AMI: 'ami-0af1df87db7b650f4'
+      AMI: 'ami-0ce107ae7af2e92b5'
     'sa-east-1':
-      AMI: 'ami-080a223be3de0c3b8'
+      AMI: 'ami-02898a1921d38a50b'
     'ca-central-1':
-      AMI: 'ami-00db12b46ef5ebc36'
+      AMI: 'ami-0c2f25c1f66a1ff4d'
     'ap-east-1':
-      AMI: 'ami-47e4a036'
+      AMI: 'ami-814d0ff0'
     'ap-southeast-1':
-      AMI: 'ami-0f02b24005e4aec36'
+      AMI: 'ami-015a6758451df3cb9'
     'ap-southeast-2':
-      AMI: 'ami-0f767afb799f45102'
+      AMI: 'ami-0f96495a064477ffb'
     'eu-central-1':
-      AMI: 'ami-0df0e7600ad0913a9'
+      AMI: 'ami-00a205cb8e06c3c4e'
     'us-east-1':
-      AMI: 'ami-0a887e401f7654935'
+      AMI: 'ami-0947d2ba12ee1ff75'
     'us-east-2':
-      AMI: 'ami-0e38b48473ea57778'
+      AMI: 'ami-03657b56516ab7912'
     'us-west-1':
-      AMI: 'ami-01c94064639c71719'
+      AMI: 'ami-0e4035ae3f70c400f'
     'us-west-2':
-      AMI: 'ami-0e8c04af2729ff1bb'
+      AMI: 'ami-0528a5175983e7f28'
 Resources:
   FindingsTopic:
     Type: 'AWS::SNS::Topic'
