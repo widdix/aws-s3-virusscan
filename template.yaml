@@ -836,7 +836,7 @@ Resources:
                                   publish_notification(bucket, key, version, INFECTED_STATUS, TAG_ACTION);
                                 else
                                   $log.debug "s3://#{bucket}/#{key} #{version} is infected"
-                                  publish_notification(bucket, key, version, INFECTED_STATUS, NONE_ACTION);
+                                  publish_notification(bucket, key, version, INFECTED_STATUS, NO_ACTION);
                                 end
                               else # An error occured.
                                 raise "s3://#{bucket}/#{key} #{version} could not be scanned, clamdscan exit status was #{exitstatus}, retry"
