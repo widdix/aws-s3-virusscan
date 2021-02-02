@@ -1,6 +1,6 @@
-# S3 VirusScan
+# Tests
 
-Tests for our S3 VirusScan. The goal of this tests is to ensure that our templates are always working. The test are implemented in Java 8 and run in JUnit 4.
+The goal of this tests is to ensure that our templates are always working. The test are implemented in Java 8 and run in JUnit 4.
 
 If you run this tests, many AWS CloudFormation tests are created and **charges will apply**!
 

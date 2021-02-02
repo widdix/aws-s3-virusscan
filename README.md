@@ -1,6 +1,8 @@
-# S3 VirusScan
+# Antivirus for S3 buckets
 
-Antivirus for S3 buckets. You can connect as many buckets as you like by using [S3 Event Notifications](http://docs.aws.amazon.com/AmazonS3/latest/dev/NotificationHowTo.html)
+You can connect as many buckets as you like by using [S3 Event Notifications](http://docs.aws.amazon.com/AmazonS3/latest/dev/NotificationHowTo.html)
+
+> The [VirusScan for Amazon S3](https://s3-virusscan.widdix.net/) with additional integrations is available in the [AWS Marketplace](https://aws.amazon.com/marketplace/pp/B07XFR781T).
 
 ## Features
 
@@ -8,8 +10,19 @@ Antivirus for S3 buckets. You can connect as many buckets as you like by using [
 * Updates ClamAV database every 3 hours automatically
 * Scales EC2 instance workers to distribute workload
 * Publishes a message to SNS in case of a finding
-* Can optionally delete compromised files automatically
+* Delete infected files if needed
 * Logs to CloudWatch Logs
+
+## Additional Commercial Features
+
+* S3 -> SNS -> VirusScan for Amazon S3 support
+* Multi-Account support
+* Quarantine infected files
+* CloudWatch Integration (Metrics and Dashboard)
+* Security Hub Integration
+* SSM OpsCenter Integration
+
+The [VirusScan for Amazon S3](https://s3-virusscan.widdix.net/) with additional integrations is available in the [AWS Marketplace](https://aws.amazon.com/marketplace/pp/B07XFR781T).
 
 ## How does it work
 
@@ -17,7 +30,7 @@ A picture is worth a thousand words:
 
 ![Architecture](./docs/architecture.png?raw=true "Architecture")
 
-1. S3 VirusScan uses a SQS queue to decouple scan jobs from the ClamAV workers. Each S3 bucket can fire events to that SQS queue in case of new objects. This feature of S3 is called [S3 Event Notifications](http://docs.aws.amazon.com/AmazonS3/latest/dev/NotificationHowTo.html).
+1. A SQS queue is used to decouple scan jobs from the ClamAV workers. Each S3 bucket can fire events to that SQS queue in case of new objects. This feature of S3 is called [S3 Event Notifications](http://docs.aws.amazon.com/AmazonS3/latest/dev/NotificationHowTo.html).
 1. The SQS queue is consumed by a fleet of EC2 instances running in an Auto Scaling Group. If the number of outstanding scan jobs reaches a threshold a new ClamAV worker is automatically added. If the queue is mostly empty workers are removed.
 1. The ClamAV workers run a simple ruby script that executes the [clamscan](http://linux.die.net/man/1/clamscan) command. In the background the virus db is updated every three hours.
 1. If `clamscan` finds a virus the file is directly deleted (you can configure that) and a SNS notification is published.
@@ -36,7 +49,7 @@ A picture is worth a thousand words:
 1. Wait until the stack reaches the state **CREATE_COMPLETE**
 
 ### Configure the buckets
-Configure the buckets you want to connect to S3 VirusScan as shown in the next figure:
+Configure the buckets you want to connect to as shown in the next figure:
 
 ![Configure Event Notifications 1](./docs/configure_event_notifications1.png?raw=true "Configure Event Notifications 1")
 
@@ -53,22 +66,7 @@ If you like to receive emails if a virus was found you must subscribe to the SNS
 
 You will receive a confirmation email.
 
-## Test
-
-### Extensive test
-
-Thanks to [Objective-See](https://objective-see.com/) for providing infected files that we use for testing. Download one of the files upload it to your S3 bucket for testing.
-We also have automated tests in place!
-
-### Simple test
-
-Create a [EICAR Standard Anti-Virus Test File](https://en.wikipedia.org/wiki/EICAR_test_file) with the following content:
-
-```
-X5O!P%@AP[4\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*
-```
-
-and upload that file to your S3 bucket.
+> The [VirusScan for Amazon S3](https://s3-virusscan.widdix.net/) with additional integrations is available in the [AWS Marketplace](https://aws.amazon.com/marketplace/pp/B07XFR781T).
 
 ## Troubleshooting
 
@@ -80,5 +78,4 @@ and upload that file to your S3 bucket.
 ## Known issues / limitations
 
 * It was [reported](https://github.com/widdix/aws-s3-virusscan/issues/12) that the solution does not run on a t2.micro or smaller. Use at least a t2.small instance.
-* In versioned buckets only the latest version of an object will be scanned. If you upload multiple versions of the same file quickly after another, chances are high that some versions are not scanned.
 * An initial scan may also be useful but is not performed at the moment. This could be implemented with a Lambda function that pushes every key to SQS.

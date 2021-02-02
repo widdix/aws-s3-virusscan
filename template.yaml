@@ -46,6 +46,7 @@ Metadata:
       - SpotPrice
       - LogsRetentionInDays
       - VolumeSize
+      - SwapSize
 Parameters:
   ParentVPCStack:
     Description: 'Stack name of parent VPC stack based on vpc/vpc-*azs.yaml template.'
@@ -77,7 +78,7 @@ Parameters:
     - true
     - false
   TagFiles:
-    Description: 'Tag S3 object upon successful scan accordingly with values of "clean" or "infected" (only if DeleteInfectedFiles != false) using key specified by TagKey.'
+    Description: 'Tag S3 object upon successful scan accordingly with values of "clean" or "infected" (infected only works if DeleteInfectedFiles != true) using key specified by TagKey.'
     Type: String
     Default: false
     AllowedValues:
@@ -133,55 +134,71 @@ Parameters:
     Default: 14
     AllowedValues: [1, 3, 5, 7, 14, 30, 60, 90, 120, 150, 180, 365, 400, 545, 731, 1827, 3653]
   VolumeSize:
-    Description: The size of the volume, in gibibytes (GiBs).
+    Description: 'The size of the volume, in gibibytes (GiBs). You can only scan files that are smaller than half of this value.'
     Type: Number
-    Default: 8
+    Default: 16
     ConstraintDescription: 'Must be in the range [8-1024]'
     MinValue: 8
     MaxValue: 1024
+  SwapSize:
+    Description: 'The size of the SWAP area (neeeds to fit into VolumeSize).'
+    Type: Number
+    Default: 2
+    ConstraintDescription: 'Must be in the range [0-8]'
+    MinValue: 0
+    MaxValue: 8
 Conditions:
+  HasSSHBastionSecurityGroup: !Not [!Equals [!Ref ParentSSHBastionStack, '']]
   HasKeyName: !Not [!Equals [!Ref KeyName, '']]
   HasIAMUserSSHAccess: !Equals [!Ref IAMUserSSHAccess, 'true']
   HasSystemsManagerAccess: !Equals [!Ref SystemsManagerAccess, 'true']
-  HasSSHBastionSecurityGroup: !Not [!Equals [!Ref ParentSSHBastionStack, '']]
   HasNotSSHBastionSecurityGroup: !Equals [!Ref ParentSSHBastionStack, '']
   HasDeleteInfectedFiles: !Equals [!Ref DeleteInfectedFiles, 'true']
   HasTagFiles: !Equals [!Ref TagFiles, 'true']
   HasSpotPrice: !Not [!Equals [!Ref SpotPrice, '']]
+  HasSwapSize: !Not [!Equals [!Ref SwapSize, '0']]
 Mappings:
   RegionMap:
-    'ap-south-1':
-      AMI: 'ami-06bcd1131b2f55803'
-    'eu-west-3':
-      AMI: 'ami-051707cdba246187b'
+    'af-south-1':
+      AMI: 'ami-0cec12e29ebe3f0d5'
     'eu-north-1':
-      AMI: 'ami-07ec6279'
+      AMI: 'ami-0653812935d0743fe'
+    'ap-south-1':
+      AMI: 'ami-0e306788ff2473ccb'
+    'eu-west-3':
+      AMI: 'ami-0de12f76efe134f2f'
     'eu-west-2':
-      AMI: 'ami-0274e11dced17bb5b'
+      AMI: 'ami-0a669382ea0feb73a'
+    'eu-south-1':
+      AMI: 'ami-0759301b88845d121'
     'eu-west-1':
-      AMI: 'ami-09693313102a30b2c'
+      AMI: 'ami-0bb3fad3c0286ebd5'
     'ap-northeast-2':
-      AMI: 'ami-0b4fdb56a00adb616'
+      AMI: 'ami-03b42693dc6a7dc35'
+    'me-south-1':
+      AMI: 'ami-08155c9ee8b845e35'
     'ap-northeast-1':
-      AMI: 'ami-0a2de1c3b415889d2'
+      AMI: 'ami-0ce107ae7af2e92b5'
     'sa-east-1':
-      AMI: 'ami-0112d42866980b373'
+      AMI: 'ami-02898a1921d38a50b'
     'ca-central-1':
-      AMI: 'ami-076b4adb3f90cd384'
+      AMI: 'ami-0c2f25c1f66a1ff4d'
+    'ap-east-1':
+      AMI: 'ami-814d0ff0'
     'ap-southeast-1':
-      AMI: 'ami-0b84d2c53ad5250c2'
+      AMI: 'ami-015a6758451df3cb9'
     'ap-southeast-2':
-      AMI: 'ami-08589eca6dcc9b39c'
+      AMI: 'ami-0f96495a064477ffb'
     'eu-central-1':
-      AMI: 'ami-034fffcc6a0063961'
+      AMI: 'ami-00a205cb8e06c3c4e'
     'us-east-1':
-      AMI: 'ami-009d6802948d06e52'
+      AMI: 'ami-0947d2ba12ee1ff75'
     'us-east-2':
-      AMI: 'ami-02e680c4540db351e'
+      AMI: 'ami-03657b56516ab7912'
     'us-west-1':
-      AMI: 'ami-011b6930a81cd6aaf'
+      AMI: 'ami-0e4035ae3f70c400f'
     'us-west-2':
-      AMI: 'ami-01bbe152bf19d0289'
+      AMI: 'ami-0528a5175983e7f28'
 Resources:
   FindingsTopic:
     Type: 'AWS::SNS::Topic'
@@ -208,6 +225,7 @@ Resources:
       Period: 300
       Statistic: Maximum
       Threshold: 0
+      TreatMissingData: notBreaching
   ScanQueueEmptyAlarm:
     Type: 'AWS::CloudWatch::Alarm'
     Properties:
@@ -223,6 +241,7 @@ Resources:
       Period: 300
       Statistic: Maximum
       Threshold: 0
+      TreatMissingData: notBreaching
   ScanQueuePolicy:
     Type: 'AWS::SQS::QueuePolicy'
     Properties:
@@ -231,9 +250,12 @@ Resources:
         Statement:
         - Effect: Allow
           Principal:
-            AWS: '*'
+            Service: 's3.amazonaws.com'
           Action: 'SQS:SendMessage'
           Resource: !GetAtt 'ScanQueue.Arn'
+          Condition:
+            StringEquals:
+              'aws:SourceAccount': !Ref 'AWS::AccountId'
       Queues:
       - !Ref ScanQueue
   ScanQueueDLQ:
@@ -256,6 +278,7 @@ Resources:
       ComparisonOperator: GreaterThanOrEqualToThreshold
       AlarmActions:
       - !Ref FindingsTopic
+      TreatMissingData: notBreaching
   ScanQueueOldMessagesAlarm:
     Type: 'AWS::CloudWatch::Alarm'
     Properties:
@@ -272,10 +295,10 @@ Resources:
       ComparisonOperator: GreaterThanOrEqualToThreshold
       AlarmActions:
       - !Ref FindingsTopic
+      TreatMissingData: notBreaching
   ScanAutoScalingGroup:
     Type: 'AWS::AutoScaling::AutoScalingGroup'
     Properties:
-
       LaunchConfigurationName: !Ref ScanLaunchConfiguration
       MaxSize: !Ref AutoScalingMaxSize
       MinSize: !Ref AutoScalingMinSize
@@ -352,13 +375,14 @@ Resources:
           Version: '2012-10-17'
           Statement:
           - Effect: Allow
-            Action:
-            - 's3:GetObject*'
+            Action: 's3:GetObject*'
             Resource: !Ref S3ObjectRestriction
           - Effect: Allow
-            Action:
-            - 's3:ListBucket*'
+            Action: 's3:ListBucket*'
             Resource: !Ref S3BucketRestriction
+          - Effect: Allow
+            Action: 'kms:Decrypt'
+            Resource: '*'
       - PolicyName: sqs
         PolicyDocument:
           Version: '2012-10-17'
@@ -375,17 +399,27 @@ Resources:
           - Effect: Allow
             Action: 'sns:Publish'
             Resource: !Ref FindingsTopic
-      - PolicyName: logs
+      - PolicyName: cloudwatch
         PolicyDocument:
           Version: '2012-10-17'
           Statement:
+          - Effect: Allow
+            Action: 'cloudwatch:PutMetricData'
+            Resource: '*'
+            Condition:
+              StringEquals:
+                'cloudwatch:namespace': !Ref 'AWS::StackName'
+          - Effect: Allow
+            Action: 'ec2:DescribeTags'
+            Resource: '*'
           - Effect: Allow
             Action:
             - 'logs:CreateLogGroup'
             - 'logs:CreateLogStream'
             - 'logs:PutLogEvents'
             - 'logs:DescribeLogStreams'
-            Resource: 'arn:aws:logs:*:*:*'
+            - 'logs:DescribeLogGroups'
+            Resource: !GetAtt 'Logs.Arn'
   DeletePolicy:
     Type: 'AWS::IAM::Policy'
     Condition: HasDeleteInfectedFiles
@@ -394,8 +428,7 @@ Resources:
         Version: '2012-10-17'
         Statement:
         - Effect: Allow
-          Action:
-          - 's3:DeleteObject*'
+          Action: 's3:DeleteObject*'
           Resource: !Ref S3ObjectRestriction
       PolicyName: s3delete
       Roles:
@@ -408,7 +441,9 @@ Resources:
         Version: '2012-10-17'
         Statement:
         - Effect: Allow
-          Action: 's3:PutObjectTagging'
+          Action:
+          - 's3:PutObjectTagging'
+          - 's3:PutObjectVersionTagging'
           Resource: !Ref S3ObjectRestriction
           Condition:
             'ForAllValues:StringLike':
@@ -446,124 +481,157 @@ Resources:
     Metadata:
       'AWS::CloudFormation::Init':
         configSets:
-          default: !If [HasIAMUserSSHAccess, [awslogs, ssh-access, extras1, extras2, config], [awslogs, extras1, extras2, config]]
-        awslogs:
+          default: [!If [HasSwapSize, swap, !Ref 'AWS::NoValue'], cloudwatch, !If [HasIAMUserSSHAccess, ssh-access, !Ref 'AWS::NoValue'], extras1, extras2, config]
+        swap:
+          commands:
+            'a_setup':
+              command: !Sub 'fallocate -l ${SwapSize}G /swapfile && chmod 600 /swapfile && mkswap /swapfile && swapon /swapfile && echo "/swapfile swap swap defaults 0 0" >> /etc/fstab'
+              test: '[ ! -f /swapfile ]'
+        cloudwatch:
           packages:
-            yum:
-              awslogs: []
+            rpm:
+              cloudwatch: 'https://s3.amazonaws.com/amazoncloudwatch-agent/amazon_linux/amd64/latest/amazon-cloudwatch-agent.rpm'
           files:
-            '/etc/awslogs/awscli.conf':
+            '/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json': # https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/CloudWatch-Agent-Configuration-File-Details.html
               content: !Sub |
-                [default]
-                region = ${AWS::Region}
-                [plugins]
-                cwlogs = cwlogs
-              mode: '000644'
-              owner: root
-              group: root
-            '/etc/awslogs/awslogs.conf':
-              content: !Sub |
-                [general]
-                state_file = /var/lib/awslogs/agent-state
-                [/var/log/amazon/ssm/amazon-ssm-agent.log]
-                datetime_format = %Y-%m-%d %H:%M:%S
-                file = /var/log/amazon/ssm/amazon-ssm-agent.log
-                log_stream_name = {instance_id}/var/log/amazon/ssm/amazon-ssm-agent.log
-                log_group_name = ${Logs}
-                [/var/log/amazon/ssm/errors.log]
-                datetime_format = %Y-%m-%d %H:%M:%S
-                file = /var/log/amazon/ssm/errors.log
-                log_stream_name = {instance_id}/var/log/amazon/ssm/errors.log
-                log_group_name = ${Logs}
-                [/var/log/audit/audit.log]
-                file = /var/log/audit/audit.log
-                log_stream_name = {instance_id}/var/log/audit/audit.log
-                log_group_name = ${Logs}
-                [/var/log/awslogs.log]
-                datetime_format = %Y-%m-%d %H:%M:%S
-                file = /var/log/awslogs.log
-                log_stream_name = {instance_id}/var/log/awslogs.log
-                log_group_name = ${Logs}
-                [/var/log/boot.log]
-                file = /var/log/boot.log
-                log_stream_name = {instance_id}/var/log/boot.log
-                log_group_name = ${Logs}
-                [/var/log/cfn-hup.log]
-                datetime_format = %Y-%m-%d %H:%M:%S
-                file = /var/log/cfn-hup.log
-                log_stream_name = {instance_id}/var/log/cfn-hup.log
-                log_group_name = ${Logs}
-                [/var/log/cfn-init-cmd.log]
-                datetime_format = %Y-%m-%d %H:%M:%S
-                file = /var/log/cfn-init-cmd.log
-                log_stream_name = {instance_id}/var/log/cfn-init-cmd.log
-                log_group_name = ${Logs}
-                [/var/log/cfn-init.log]
-                datetime_format = %Y-%m-%d %H:%M:%S
-                file = /var/log/cfn-init.log
-                log_stream_name = {instance_id}/var/log/cfn-init.log
-                log_group_name = ${Logs}
-                [/var/log/cfn-wire.log]
-                datetime_format = %Y-%m-%d %H:%M:%S
-                file = /var/log/cfn-wire.log
-                log_stream_name = {instance_id}/var/log/cfn-wire.log
-                log_group_name = ${Logs}
-                [/var/log/cloud-init-output.log]
-                file = /var/log/cloud-init-output.log
-                log_stream_name = {instance_id}/var/log/cloud-init-output.log
-                log_group_name = ${Logs}
-                [/var/log/cloud-init.log]
-                datetime_format = %b %d %H:%M:%S
-                file = /var/log/cloud-init.log
-                log_stream_name = {instance_id}/var/log/cloud-init.log
-                log_group_name = ${Logs}
-                [/var/log/cron]
-                datetime_format = %b %d %H:%M:%S
-                file = /var/log/cron
-                log_stream_name = {instance_id}/var/log/cron
-                log_group_name = ${Logs}
-                [/var/log/dmesg]
-                file = /var/log/dmesg
-                log_stream_name = {instance_id}/var/log/dmesg
-                log_group_name = ${Logs}
-                [/var/log/grubby_prune_debug]
-                file = /var/log/grubby_prune_debug
-                log_stream_name = {instance_id}/var/log/grubby_prune_debug
-                log_group_name = ${Logs}
-                [/var/log/maillog]
-                datetime_format = %b %d %H:%M:%S
-                file = /var/log/maillog
-                log_stream_name = {instance_id}/var/log/maillog
-                log_group_name = ${Logs}
-                [/var/log/messages]
-                datetime_format = %b %d %H:%M:%S
-                file = /var/log/messages
-                log_stream_name = {instance_id}/var/log/messages
-                log_group_name = ${Logs}
-                [/var/log/secure]
-                datetime_format = %b %d %H:%M:%S
-                file = /var/log/secure
-                log_stream_name = {instance_id}/var/log/secure
-                log_group_name = ${Logs}
-                [/var/log/yum.log]
-                datetime_format = %b %d %H:%M:%S
-                file = /var/log/yum.log
-                log_stream_name = {instance_id}/var/log/yum.log
-                log_group_name = ${Logs}
+                {
+                  "logs": {
+                    "logs_collected": {
+                      "files": {
+                        "collect_list": [{
+                           "log_group_name": "${Logs}",
+                           "file_path": "/var/log/amazon/amazon-cloudwatch-agent/amazon-cloudwatch-agent.log",
+                           "log_stream_name": "{instance_id}/var/log/amazon/amazon-cloudwatch-agent/amazon-cloudwatch-agent.log",
+                           "timestamp_format": "%Y-%m-%dT%H:%M:%S"
+                        }, {
+                           "log_group_name": "${Logs}",
+                           "file_path": "/var/log/amazon/amazon-cloudwatch-agent/configuration-validation.log",
+                           "log_stream_name": "{instance_id}/var/log/amazon/amazon-cloudwatch-agent/configuration-validation.log",
+                           "timestamp_format": "%Y/%m/%d %H:%M:%S"
+                        }, {
+                          "log_group_name": "${Logs}",
+                          "file_path": "/var/log/amazon/ssm/amazon-ssm-agent.log",
+                          "log_stream_name": "{instance_id}/var/log/amazon/ssm/amazon-ssm-agent.log",
+                          "timestamp_format": "%Y-%m-%d %H:%M:%S"
+                        }, {
+                           "log_group_name": "${Logs}",
+                           "file_path": "/var/log/amazon/ssm/errors.log",
+                           "log_stream_name": "{instance_id}/var/log/amazon/ssm/errors.log",
+                           "timestamp_format": "%Y-%m-%d %H:%M:%S"
+                        }, {
+                           "log_group_name": "${Logs}",
+                           "file_path": "/var/log/audit/audit.log",
+                           "log_stream_name": "{instance_id}/var/log/audit/audit.log"
+                        }, {
+                           "log_group_name": "${Logs}",
+                           "file_path": "/var/log/boot.log",
+                           "log_stream_name": "{instance_id}/var/log/boot.log"
+                        }, {
+                           "log_group_name": "${Logs}",
+                           "file_path": "/var/log/cfn-hup.log",
+                           "log_stream_name": "{instance_id}/var/log/cfn-hup.log",
+                           "timestamp_format": "%Y-%m-%d %H:%M:%S"
+                        }, {
+                           "log_group_name": "${Logs}",
+                           "file_path": "/var/log/cfn-init-cmd.log",
+                           "log_stream_name": "{instance_id}/var/log/cfn-init-cmd.log",
+                           "timestamp_format": "%Y-%m-%d %H:%M:%S"
+                        }, {
+                           "log_group_name": "${Logs}",
+                           "file_path": "/var/log/cfn-init.log",
+                           "log_stream_name": "{instance_id}/var/log/cfn-init.log",
+                           "timestamp_format": "%Y-%m-%d %H:%M:%S"
+                        }, {
+                           "log_group_name": "${Logs}",
+                           "file_path": "/var/log/cfn-wire.log",
+                           "log_stream_name": "{instance_id}/var/log/cfn-wire.log",
+                           "timestamp_format": "%Y-%m-%d %H:%M:%S"
+                        }, {
+                           "log_group_name": "${Logs}",
+                           "file_path": "/var/log/cloud-init-output.log",
+                           "log_stream_name": "{instance_id}/var/log/cloud-init-output.log"
+                        }, {
+                           "log_group_name": "${Logs}",
+                           "file_path": "/var/log/cloud-init.log",
+                           "log_stream_name": "{instance_id}/var/log/cloud-init.log",
+                           "timestamp_format": "%b %d %H:%M:%S"
+                        }, {
+                           "log_group_name": "${Logs}",
+                           "file_path": "/var/log/cron",
+                           "log_stream_name": "{instance_id}/var/log/cron",
+                           "timestamp_format": "%b %-d %H:%M:%S"
+                        }, {
+                           "log_group_name": "${Logs}",
+                           "file_path": "/var/log/dmesg",
+                           "log_stream_name": "{instance_id}/var/log/dmesg"
+                        }, {
+                           "log_group_name": "${Logs}",
+                           "file_path": "/var/log/grubby_prune_debug",
+                           "log_stream_name": "{instance_id}/var/log/grubby_prune_debug"
+                        }, {
+                           "log_group_name": "${Logs}",
+                           "file_path": "/var/log/maillog",
+                           "log_stream_name": "{instance_id}/var/log/maillog",
+                           "timestamp_format": "%b %-d %H:%M:%S"
+                        }, {
+                           "log_group_name": "${Logs}",
+                           "file_path": "/var/log/messages",
+                           "log_stream_name": "{instance_id}/var/log/messages",
+                           "timestamp_format": "%b %-d %H:%M:%S"
+                        }, {
+                           "log_group_name": "${Logs}",
+                           "file_path": "/var/log/secure",
+                           "log_stream_name": "{instance_id}/var/log/secure",
+                           "timestamp_format": "%b %-d %H:%M:%S"
+                        }, {
+                           "log_group_name": "${Logs}",
+                           "file_path": "/var/log/yum.log",
+                           "log_stream_name": "{instance_id}/var/log/yum.log",
+                           "timestamp_format": "%b %d %H:%M:%S"
+                        }]
+                      }
+                    }
+                  },
+                  "metrics": {
+                    "namespace": "${AWS::StackName}",
+                    "append_dimensions": {
+                      "AutoScalingGroupName": "${!aws:AutoScalingGroupName}"
+                    },
+                    "metrics_collected": {
+                      "mem": {
+                        "measurement": [
+                          "mem_used_percent"
+                        ]
+                      },
+                      "swap": {
+                        "measurement": [
+                          "swap_used_percent"
+                        ]
+                      },
+                      "disk": {
+                        "resources": [
+                          "/"
+                        ],
+                        "measurement": [
+                          "used_percent"
+                        ],
+                        "drop_device": true
+                      }
+                    }
+                  }
+                }
               mode: '000644'
               owner: root
               group: root
           services:
             sysvinit:
-              awslogsd:
+              'amazon-cloudwatch-agent':
                 enabled: true
                 ensureRunning: true
-                packages:
-                  yum:
-                  - awslogs
                 files:
-                - '/etc/awslogs/awslogs.conf'
-                - '/etc/awslogs/awscli.conf'
+                - '/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json'
+                packages:
+                - cloudwatch
         ssh-access:
           files:
             '/opt/authorized_keys_command.sh':
@@ -647,17 +715,17 @@ Resources:
               clamav-update: []
               ruby: []
             rubygems:
-              'aws-sdk-sqs': ['1.10.0']
-              'aws-sdk-sns': ['1.9.0']
-              'aws-sdk-s3': ['1.30.1']
-              daemons: ['1.2.6']
+              'aws-sdk-sqs': ['1.23.1']
+              'aws-sdk-sns': ['1.20.0']
+              'aws-sdk-s3': ['1.54.0']
+              daemons: ['1.3.1']
               'rubysl-securerandom': ['2.0.0']
           files:
             '/opt/aws-s3-virusscan/daemon.rb':
               content: |
                 #!/usr/bin/env ruby
                 require 'daemons'
-                Daemons.run(__dir__ + '/worker.rb', {:monitor => true, :log_output_syslog => true})
+                Daemons.run(__dir__ + '/worker.rb', {:app_name => 's3-virusscan', :monitor => true, :dir_mode => :system, :log_output_syslog => true})
               mode: '000744'
               owner: root
               group: root
@@ -673,81 +741,105 @@ Resources:
                 require 'syslog/logger'
                 require 'securerandom'
 
-                class ClamScanWorker
+                $log = Syslog::Logger.new 's3-virusscan'
 
-                  attr_reader :log, :conf, :sns, :tag_key, :clean_tag_set, :infected_tag_set
+                class Worker
 
+                  attr_reader :conf, :sns, :s3, :tag_key
+
+                  NO_STATUS = 'no'
                   CLEAN_STATUS = 'clean'
                   INFECTED_STATUS = 'infected'
 
+                  NO_ACTION = 'no'
+                  TAG_ACTION = 'tag'
+                  DELETE_ACTION = 'delete'
+
                   def initialize
-                    @log = Syslog::Logger.new 's3-virusscan'
                     @conf = YAML::load_file(__dir__ + '/s3-virusscan.conf')
                     Aws.config.update(region: conf['region'])
                     @tag_key = conf['tag_key']
-                    @clean_tag_set = {tag_set: [{key: tag_key, value: CLEAN_STATUS}]}
-                    @infected_tag_set = {tag_set: [{key: tag_key, value: INFECTED_STATUS}]}
                     @sns = Aws::SNS::Client.new()
+                    @s3 = Aws::S3::Client.new()
                   end
 
-                  def perform
-                    log.info "s3-virusscan started"
+                  def run
+                    $log.info "s3-virusscan started"
 
-                    s3 = Aws::S3::Client.new()
                     poller = Aws::SQS::QueuePoller.new(conf['queue'])
+
+                    max_size = conf['volume_size'] * 1073741824 / 2 # in bytes
 
                     poller.poll do |msg|
                       begin
                         body = JSON.parse(msg.body)
+                        $log.debug "body #{body}"
                         if body.key?('Records')
                           body['Records'].each do |record|
                             bucket = record['s3']['bucket']['name']
-                            key = URI.decode(record['s3']['object']['key']).gsub('+', ' ')
+                            key = URI.decode_www_form_component(record['s3']['object']['key'])
+                            version = record['s3']['object']['versionId']
                             fileName = "/tmp/#{SecureRandom.uuid}"
-                            log.debug "scanning s3://#{bucket}/#{key}..."
+                            if record['s3']['object']['size'] > max_size
+                              $log.info "s3://#{bucket}/#{key} #{version} bigger than half of the EBS volume, skip"
+                              if conf['tag_files']
+                                tag(bucket, key, version, NO_STATUS);
+                              end
+                              publish_notification(bucket, key, version, NO_STATUS, NO_ACTION);
+                              next
+                            end
+                            $log.debug "downloading s3://#{bucket}/#{key} #{version}..."
                             begin
-                              s3.get_object(
-                                response_target: fileName,
-                                bucket: bucket,
-                                key: key
-                              )
+                              if version
+                                s3.get_object(
+                                  response_target: fileName,
+                                  bucket: bucket,
+                                  key: key
+                                )
+                              else
+                                s3.get_object(
+                                  response_target: fileName,
+                                  bucket: bucket,
+                                  key: key,
+                                  version_id: version
+                                )
+                              end
                             rescue Aws::S3::Errors::NoSuchKey
-                              log.debug "s3://#{bucket}/#{key} does no longer exist"
+                              $log.info "s3://#{bucket}/#{key} #{version} does no longer exist, skip"
                               next
                             end
                             begin
+                              $log.info "scanning s3://#{bucket}/#{key} #{version}..."
                               system("clamdscan #{fileName}")
                               exitstatus = $?.exitstatus
                               if exitstatus == 0 # No virus found.
-                                if conf['report_clean']
-                                  publish_notification(bucket, key, CLEAN_STATUS);
-                                else
-                                  log.debug "s3://#{bucket}/#{key} is clean"
-                                end
                                 if conf['tag_files']
-                                  s3.put_object_tagging({
-                                      bucket: bucket,
-                                      key: key,
-                                      tagging: clean_tag_set
-                                  })
+                                  $log.debug "s3://#{bucket}/#{key} #{version} is clean (tagging)"
+                                  tag(bucket, key, version, CLEAN_STATUS);
+                                else
+                                  $log.debug "s3://#{bucket}/#{key} #{version} is clean"
+                                end
+                                if conf['report_clean']
+                                  publish_notification(bucket, key, version, CLEAN_STATUS, NO_ACTION);
                                 end
                               elsif exitstatus == 1 # Virus(es) found.
-                                publish_notification(bucket, key, INFECTED_STATUS);
                                 if conf['delete']
+                                  $log.debug "s3://#{bucket}/#{key} #{version} is infected (deleting)"
                                   s3.delete_object(
                                     bucket: bucket,
                                     key: key
                                   )
-                                  log.debug "s3://#{bucket}/#{key} was deleted"
+                                  publish_notification(bucket, key, version, INFECTED_STATUS, DELETE_ACTION);
                                 elsif conf['tag_files']
-                                  s3.put_object_tagging({
-                                      bucket: bucket,
-                                      key: key,
-                                      tagging: infected_tag_set
-                                  })
+                                  $log.debug "s3://#{bucket}/#{key} #{version} is infected (tagging)"
+                                  tag(bucket, key, version, INFECTED_STATUS);
+                                  publish_notification(bucket, key, version, INFECTED_STATUS, TAG_ACTION);
+                                else
+                                  $log.debug "s3://#{bucket}/#{key} #{version} is infected"
+                                  publish_notification(bucket, key, version, INFECTED_STATUS, NO_ACTION);
                                 end
                               else # An error occured.
-                                raise "s3://#{bucket}/#{key} could not be scanned, clamdscan exit status was #{exitstatus}, retry"
+                                raise "s3://#{bucket}/#{key} #{version} could not be scanned, clamdscan exit status was #{exitstatus}, retry"
                               end
                             ensure
                               system("rm #{fileName}")
@@ -755,7 +847,7 @@ Resources:
                           end
                         end
                       rescue Exception => e
-                        log.error "message failed: #{e.inspect} #{msg.inspect}"
+                        $log.error "message failed: #{e.inspect} #{msg.inspect}"
                         raise e
                       end
                     end
@@ -763,33 +855,64 @@ Resources:
 
                   private
 
-                  def publish_notification(bucket, key, status)
-                    msg = "s3://#{bucket}/#{key} is #{status}"
-                    if status == INFECTED_STATUS and conf['delete']
-                      msg << ", deleting..."
+                  def tag(bucket, key, version, status)
+                    if version
+                      s3.put_object_tagging(
+                        bucket: bucket,
+                        key: key,
+                        version_id: version,
+                        tagging: {tag_set: [{key: tag_key, value: status}]}
+                      )
+                    else
+                      s3.put_object_tagging(
+                        bucket: bucket,
+                        key: key,
+                        tagging: {tag_set: [{key: tag_key, value: status}]}
+                      )
                     end
-                    log.debug msg
+                  end
+
+                  def publish_notification(bucket, key, version, status, action)
+                    message_attributes = {
+                      "bucket" => {
+                        data_type: "String",
+                        string_value: bucket
+                      },
+                      "key" => {
+                        data_type: "String",
+                        string_value: key
+                      },
+                      "status" => {
+                        data_type: "String",
+                        string_value: status
+                      },
+                      "action" => {
+                        data_type: "String",
+                        string_value: action
+                      }
+                    }
+                    if version
+                      message_attributes[:version] = {
+                        data_type: "String",
+                        string_value: version
+                      }
+                    end
                     sns.publish(
                       topic_arn: conf['topic'],
-                      message: msg,
+                      message: "s3://#{bucket}/#{key} #{version} is #{status}, #{action} action executed",
                       subject: "s3-virusscan s3://#{bucket}",
-                      message_attributes: {
-                        "key" => {
-                          data_type: "String",
-                          string_value: key
-                        },
-                        "status" => {
-                          data_type: "String",
-                          string_value: status
-                        }
-                      }
+                      message_attributes: message_attributes
                     )
                   end
 
                 end
 
-                # do some work
-                ClamScanWorker.new.perform
+                begin
+                  Worker.new.run
+                rescue Exception => e
+                  $log.error "worker failed: #{e.inspect}"
+                  raise e
+                end
               mode: '000744'
               owner: root
               group: root
@@ -802,6 +925,7 @@ Resources:
                 region: ${AWS::Region}
                 queue: ${ScanQueue}
                 topic: ${FindingsTopic}
+                volume_size: ${VolumeSize}
               mode: '000644'
               owner: root
               group: root
@@ -864,6 +988,12 @@ Resources:
               test: '[ ! -f /etc/clamd.conf ]'
             f_update_clamav_db:
               command: freshclam
+            g_systemctl_enable_clamd:
+              command: 'systemctl enable clamd@scan'
+              test: '! systemctl is-enabled clamd@scan'
+            h_systemctl_start_clamd:
+              command: 'systemctl start clamd@scan'
+              test: '! systemctl is-active clamd@scan'
           services:
             sysvinit:
               's3-virusscan':
@@ -874,14 +1004,6 @@ Resources:
                 - '/opt/aws-s3-virusscan/worker.rb'
                 - '/opt/aws-s3-virusscan/s3-virusscan.conf'
                 - '/etc/init.d/s3-virusscan'
-              'clamd@scan':
-                enabled: true
-                ensureRunning: true
-                packages:
-                  yum:
-                  - clamd
-                files:
-                - '/etc/clamd.conf'
               amazon-ssm-agent:
                 enabled: !If [HasSystemsManagerAccess, true, false]
                 ensureRunning: !If [HasSystemsManagerAccess, true, false]
