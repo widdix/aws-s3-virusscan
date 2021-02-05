@@ -9,8 +9,11 @@ If you run this tests, many AWS CloudFormation tests are created and **charges w
 ## Supported env variables
 
 * `IAM_ROLE_ARN` if the tests should assume an IAM role before they run supply the ARN of the IAM role
-* `TEMPLATE_DIR` Load templates from local disk (instead of S3 bucket `widdix-aws-cf-templates`). Must end with an `/`. See `BUCKET_NAME` as well.
+* `TEMPLATE_DIR` Load templates from local disk (instead of S3 bucket `widdix-aws-s3-virusscan`). Must end with an `/`. See `BUCKET_NAME` as well.
+* `BUCKET_NAME` Some templates are to big to be passed as a string from local disk, therefore you need to supply the name of the bucket that is used to upload templates.
+* `BUCKET_REGION` **required if BUCKET_NAME is set** Region of the bucket
 * `DELETION_POLICY` (default `delete`, allowed values [`delete`, `retain`]) should resources be deleted?
+* `FAILURE_POLICY` (default `rollback`, allowed values [`rollback`, `retain`]) what happens if a stack fails?
 * `INFECTED_FILES_BUCKET_NAME` S3 bucket name with infected files (all objects must be infected!). Ignored if not set.
 * `INFECTED_FILES_BUCKET_REGION` **required if INFECTED_FILES_BUCKET_NAME is set** Region of the bucket.
 
@@ -34,18 +37,18 @@ AWS_REGION="us-east-1" mvn test
 
 ### Run a single test suite
 
-to run the `TestJenkins` tests:
+to run the `TestEicarFile` tests:
 
 ```
-AWS_REGION="us-east-1" mvn -Dtest=TestS3VirusScan test
+AWS_REGION="us-east-1" mvn -Dtest=TestEicarFile test
 ```
 
 ### Run a single test
 
-to run the `TestS3VirusScan.test` test:
+to run the `TestEicarFile.test` test:
 
 ```
-AWS_REGION="us-east-1" mvn -Dtest=TestS3VirusScan#testWithoutFileDeletion test
+AWS_REGION="us-east-1" mvn -Dtest=TestEicarFile#testWithoutFileDeletion test
 ```
 
 ### Load templates from local file system

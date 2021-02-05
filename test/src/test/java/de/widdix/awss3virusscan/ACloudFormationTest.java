@@ -4,12 +4,17 @@ import com.amazonaws.AmazonServiceException;
 import com.amazonaws.services.cloudformation.AmazonCloudFormation;
 import com.amazonaws.services.cloudformation.AmazonCloudFormationClientBuilder;
 import com.amazonaws.services.cloudformation.model.*;
+import com.amazonaws.services.s3.AmazonS3;
+import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.*;
+import java.util.concurrent.Callable;
 
 public abstract class ACloudFormationTest extends AAWSTest {
 
@@ -22,40 +27,67 @@ public abstract class ACloudFormationTest extends AAWSTest {
         }
     }
 
-    private final AmazonCloudFormation cf = AmazonCloudFormationClientBuilder.standard().withCredentials(this.credentialsProvider).build();
+    protected final AmazonCloudFormation cf = AmazonCloudFormationClientBuilder.standard().withCredentials(this.credentialsProvider).build();
 
     public ACloudFormationTest() {
         super();
     }
 
-    protected final void createWiddixStack(final String stackName, final String template, final Parameter... parameters) {
-        final CreateStackRequest req = new CreateStackRequest()
-                .withStackName(stackName)
-                .withParameters(parameters)
-                .withCapabilities(Capability.CAPABILITY_IAM)
-                .withTemplateURL("https://s3-eu-west-1.amazonaws.com/widdix-aws-cf-templates-releases-eu-west-1/stable/" + template);
-        this.cf.createStack(req);
-        this.waitForStack(stackName, FinalStatus.CREATE_COMPLETE);
-    }
-
-    protected final void createStack(final String stackName, final String template, final Parameter... parameters) {
+    protected final void createStack(final Context context, final String stackName, final String template, final Parameter... parameters) {
+        context.addStack(stackName);
         CreateStackRequest req = new CreateStackRequest()
                 .withStackName(stackName)
                 .withParameters(parameters)
                 .withCapabilities(Capability.CAPABILITY_IAM);
         if (Config.has(Config.Key.TEMPLATE_DIR)) {
             final String dir = Config.get(Config.Key.TEMPLATE_DIR);
-            final String body = readFile(dir + template, Charset.forName("UTF-8"));
-            req = req.withTemplateBody(body);
+            if (Config.has(Config.Key.BUCKET_NAME)) {
+                final String bucketName = Config.get(Config.Key.BUCKET_NAME);
+                final String bucketRegion = Config.get(Config.Key.BUCKET_REGION);
+                final AmazonS3 s3local = AmazonS3ClientBuilder.standard().withCredentials(this.credentialsProvider).withRegion(bucketRegion).build();
+                s3local.putObject(bucketName, stackName, new File(dir + template));
+                req = req.withTemplateURL("https://s3-" + bucketRegion + ".amazonaws.com/" + bucketName + "/" + stackName);
+            } else {
+                final String body = readFile(dir + template, StandardCharsets.UTF_8);
+                req = req.withTemplateBody(body);
+            }
         } else {
             req = req.withTemplateURL("https://s3-eu-west-1.amazonaws.com/widdix-aws-s3-virusscan/" + template);
         }
+        if (Config.get(Config.Key.FAILURE_POLICY).equals("retain")) {
+            req = req.withOnFailure(OnFailure.DO_NOTHING);
+        }
         this.cf.createStack(req);
-        this.waitForStack(stackName, FinalStatus.CREATE_COMPLETE);
+        this.waitForStack(context, stackName, FinalStatus.CREATE_COMPLETE);
+    }
+
+    protected final void updateStack(final Context context, final String stackName, final String template, final Parameter... parameters) {
+        UpdateStackRequest req = new UpdateStackRequest()
+                .withStackName(stackName)
+                .withParameters(parameters)
+                .withCapabilities(Capability.CAPABILITY_IAM);
+        if (Config.has(Config.Key.TEMPLATE_DIR)) {
+            final String dir = Config.get(Config.Key.TEMPLATE_DIR);
+            if (Config.has(Config.Key.BUCKET_NAME)) {
+                final String bucketName = Config.get(Config.Key.BUCKET_NAME);
+                final String bucketRegion = Config.get(Config.Key.BUCKET_REGION);
+                final AmazonS3 s3local = AmazonS3ClientBuilder.standard().withCredentials(this.credentialsProvider).withRegion(bucketRegion).build();
+                s3local.putObject(bucketName, stackName, new File(dir + template));
+                req = req.withTemplateURL("https://s3-" + bucketRegion + ".amazonaws.com/" + bucketName + "/" + stackName);
+            } else {
+                final String body = readFile(dir + template, StandardCharsets.UTF_8);
+                req = req.withTemplateBody(body);
+            }
+        } else {
+            req = req.withTemplateURL("https://s3-eu-west-1.amazonaws.com/widdix-aws-s3-virusscan/" + template);
+        }
+        this.cf.updateStack(req);
+        this.waitForStack(context, stackName, FinalStatus.UPDATE_COMPLETE);
     }
 
     protected enum FinalStatus {
         CREATE_COMPLETE(StackStatus.CREATE_COMPLETE, false, true, StackStatus.CREATE_IN_PROGRESS),
+        UPDATE_COMPLETE(StackStatus.UPDATE_COMPLETE, false, false, StackStatus.UPDATE_COMPLETE_CLEANUP_IN_PROGRESS, StackStatus.UPDATE_IN_PROGRESS),
         DELETE_COMPLETE(StackStatus.DELETE_COMPLETE, true, false, StackStatus.DELETE_IN_PROGRESS);
 
         private final StackStatus finalStatus;
@@ -91,12 +123,12 @@ public abstract class ACloudFormationTest extends AAWSTest {
         return events;
     }
 
-    private void waitForStack(final String stackName, final FinalStatus finalStackStatus) {
+    protected void waitForStack(final Context context, final String stackName, final FinalStatus finalStackStatus) {
         System.out.println("waitForStack[" + stackName + "]: to reach status " + finalStackStatus.finalStatus);
         final List<StackEvent> eventsDisplayed = new ArrayList<>();
         while (true) {
             try {
-                Thread.sleep(5000);
+                Thread.sleep(20000);
             } catch (final InterruptedException e) {
                 // continue
             }
@@ -123,6 +155,7 @@ public abstract class ACloudFormationTest extends AAWSTest {
                     if (finalStackStatus.intermediateStatus.contains(currentStatus)) {
                         System.out.println("waitForStack[" + stackName + "]: continue to wait (still in intermediate status " + currentStatus + ") ...");
                     } else {
+                        context.reportStackFailure(stackName);
                         throw new RuntimeException("waitForStack[" + stackName + "]: reached invalid intermediate status " + currentStatus + ".");
                     }
                 }
@@ -135,6 +168,7 @@ public abstract class ACloudFormationTest extends AAWSTest {
                         if (finalStackStatus.notFoundIsIntermediateStatus) {
                             System.out.println("waitForStack[" + stackName + "]: continue to wait (stack not found) ...");
                         } else {
+                            context.reportStackFailure(stackName);
                             throw new RuntimeException("waitForStack[" + stackName + "]: stack not found.");
                         }
                     }
@@ -159,10 +193,26 @@ public abstract class ACloudFormationTest extends AAWSTest {
         return this.getStackOutputs(stackName).get(outputKey);
     }
 
-    protected final void deleteStack(final String stackName) {
+    protected final void deleteStackAndRetryOnFailure(final Context context, final String stackName) {
+        final Callable<Boolean> callable = () -> {
+            this.deleteStack(context, stackName);
+            return true;
+        };
+        this.retry(context, callable);
+    }
+
+    protected final void deleteStack(final Context context, final String stackName) {
         if (Config.get(Config.Key.DELETION_POLICY).equals("delete")) {
-            this.cf.deleteStack(new DeleteStackRequest().withStackName(stackName));
-            this.waitForStack(stackName, FinalStatus.DELETE_COMPLETE);
+            if (Config.get(Config.Key.FAILURE_POLICY).equals("retain") && context.hasFailure()) {
+                System.out.println("Skip stack deletion because of stack failure in context and FAILURE_POLICY := retain");
+            } else {
+                this.cf.deleteStack(new DeleteStackRequest().withStackName(stackName));
+                if (Config.has(Config.Key.BUCKET_NAME)) {
+                    final AmazonS3 s3local = AmazonS3ClientBuilder.standard().withCredentials(this.credentialsProvider).withRegion(Config.get(Config.Key.BUCKET_REGION)).build();
+                    s3local.deleteObject(Config.get(Config.Key.BUCKET_NAME), stackName);
+                }
+                this.waitForStack(context, stackName, FinalStatus.DELETE_COMPLETE);
+            }
         }
     }
 

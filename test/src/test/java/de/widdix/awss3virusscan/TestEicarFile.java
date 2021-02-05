@@ -6,27 +6,28 @@ import org.junit.Test;
 
 import java.util.List;
 
-public class TestS3VirusScan extends ACloudFormationTest {
+public class TestEicarFile extends AVirusTest {
 
     @Test
     public void testWithoutFileDeletion() {
+        final Context context = new Context();
         final String vpcStackName = "vpc-2azs-" + this.random8String();
         final String stackName = "s3-virusscan-" + this.random8String();
         final String bucketName = "s3-virusscan-" + this.random8String();
         try {
-            this.createWiddixStack(vpcStackName, "vpc/vpc-2azs.yaml");
+            this.createWiddixStack(context, vpcStackName, "vpc/vpc-2azs.yaml");
             try {
-                this.createStack(stackName,
+                this.createStack(context, stackName,
                         "template.yaml",
                         new Parameter().withParameterKey("ParentVPCStack").withParameterValue(vpcStackName),
                         new Parameter().withParameterKey("TagFiles").withParameterValue("true"),
                         new Parameter().withParameterKey("DeleteInfectedFiles").withParameterValue("false")
                 );
                 try {
-                    this.createBucket(bucketName, this.getStackOutputValue(stackName, "ScanQueueArn"));
+                    this.createBucketWithSQSNotification(bucketName, this.getStackOutputValue(stackName, "ScanQueueArn"));
                     this.createObject(bucketName, "no-virus.txt", "not a virus");
                     this.createObject(bucketName, "virus.txt", "X5O!P%@AP[4\\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*");
-                    this.retry(() -> {
+                    this.retry(context, () -> {
                         final List<Tag> tags = this.getObjectTags(bucketName, "no-virus.txt");
                         if (tags.size() == 1) {
                             final Tag tag = tags.get(0);
@@ -43,7 +44,7 @@ public class TestS3VirusScan extends ACloudFormationTest {
                             throw new RuntimeException("one tag expected, but saw " + tags.size());
                         }
                     });
-                    this.retry(() -> {
+                    this.retry(context, () -> {
                         final List<Tag> tags = this.getObjectTags(bucketName, "virus.txt");
                         if (tags.size() == 1) {
                             final Tag tag = tags.get(0);
@@ -60,89 +61,58 @@ public class TestS3VirusScan extends ACloudFormationTest {
                             throw new RuntimeException("one tag expected, but saw " + tags.size());
                         }
                     });
-                    this.deleteObject(bucketName, "no-virus.txt");
-                    this.deleteObject(bucketName, "virus.txt");
+                    this.deleteObject(context, bucketName, "no-virus.txt");
+                    this.deleteObject(context, bucketName, "virus.txt");
                 } finally {
-                    this.deleteBucket(bucketName);
+                    this.deleteBucket(context, bucketName);
                 }
             } finally {
-                this.deleteStack(stackName);
+                this.deleteStack(context, stackName);
             }
         } finally {
-            this.deleteStack(vpcStackName);
+            this.deleteStack(context, vpcStackName);
         }
     }
 
     @Test
     public void testWithFileDeletion() {
+        final Context context = new Context();
         final String vpcStackName = "vpc-2azs-" + this.random8String();
         final String stackName = "s3-virusscan-" + this.random8String();
         final String bucketName = "s3-virusscan-" + this.random8String();
         try {
-            this.createWiddixStack(vpcStackName, "vpc/vpc-2azs.yaml");
+            this.createWiddixStack(context, vpcStackName, "vpc/vpc-2azs.yaml");
             try {
-                this.createStack(stackName,
+                this.createStack(context, stackName,
                         "template.yaml",
                         new Parameter().withParameterKey("ParentVPCStack").withParameterValue(vpcStackName)
                 );
                 try {
-                    this.createBucket(bucketName, this.getStackOutputValue(stackName, "ScanQueueArn"));
+                    this.createBucketWithSQSNotification(bucketName, this.getStackOutputValue(stackName, "ScanQueueArn"));
                     this.createObject(bucketName, "no-virus.txt", "not a virus");
                     this.createObject(bucketName, "virus.txt", "X5O!P%@AP[4\\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*");
-                    this.retry(() -> {
+                    this.retry(context, () -> {
                         if (this.doesObjectExist(bucketName, "virus.txt") == true) { // expected to be deleted
                             throw new RuntimeException("virus.txt must be deleted");
                         }
                         return false;
                     });
-                    this.retry(() -> {
+                    this.retry(context, () -> {
                         if (this.doesObjectExist(bucketName, "no-virus.txt") == false) { // expected to exist
                             throw new RuntimeException("no-virus.txt must be existing");
                         }
                         return true;
                     });
-                    this.deleteObject(bucketName, "no-virus.txt");
+                    this.deleteObject(context, bucketName, "no-virus.txt");
                 } finally {
-                    this.deleteBucket(bucketName);
+                    this.deleteBucket(context, bucketName);
                 }
             } finally {
-                this.deleteStack(stackName);
+                this.deleteStack(context, stackName);
             }
         } finally {
-            this.deleteStack(vpcStackName);
+            this.deleteStack(context, vpcStackName);
         }
     }
 
-    @Test
-    public void testManyFiles() {
-        final String vpcStackName = "vpc-2azs-" + this.random8String();
-        final String stackName = "s3-virusscan-" + this.random8String();
-        final String bucketName = "s3-virusscan-" + this.random8String();
-        final InfectedFileCache cache = new InfectedFileCache();
-        try {
-            this.createWiddixStack(vpcStackName, "vpc/vpc-2azs.yaml");
-            try {
-                this.createStack(stackName,
-                        "template.yaml",
-                        new Parameter().withParameterKey("ParentVPCStack").withParameterValue(vpcStackName)
-                );
-                try {
-                    this.createBucket(bucketName, this.getStackOutputValue(stackName, "ScanQueueArn"));
-                    cache.getFiles().forEach(file -> this.createObject(bucketName, file.getkey(), file.getContent(), file.getContentType(), file.getContentLength()));
-                    this.retry(() -> {
-                        if (this.countBucket(bucketName) != 0) { // all files are expected to be deleted
-                            throw new RuntimeException("there are infected files left");
-                        }
-                        return false;
-                    });
-                } finally {
-                    this.deleteBucket(bucketName);
-                }
-            } finally {
-                this.deleteStack(stackName);
-            }
-        } finally {
-            this.deleteStack(vpcStackName);
-        }
-    }
 }
