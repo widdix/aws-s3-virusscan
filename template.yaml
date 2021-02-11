@@ -794,14 +794,14 @@ Resources:
                                 s3.get_object(
                                   response_target: fileName,
                                   bucket: bucket,
-                                  key: key
+                                  key: key,
+                                  version_id: version
                                 )
                               else
                                 s3.get_object(
                                   response_target: fileName,
                                   bucket: bucket,
-                                  key: key,
-                                  version_id: version
+                                  key: key
                                 )
                               end
                             rescue Aws::S3::Errors::NoSuchKey
