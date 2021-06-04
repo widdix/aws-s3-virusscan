@@ -1,28 +1,35 @@
-# Antivirus for S3 buckets
+# Antivirus for Amazon S3
 
-You can connect as many buckets as you like by using [S3 Event Notifications](http://docs.aws.amazon.com/AmazonS3/latest/dev/NotificationHowTo.html)
+This template creates a malware scanner cluster for S3 buckets. Connect as many S3 buckets as you like.
 
-> The [VirusScan for Amazon S3](https://s3-virusscan.widdix.net/) with additional integrations is available in the [AWS Marketplace](https://aws.amazon.com/marketplace/pp/B07XFR781T).
+> [bucketAV - Antivirus for Amazon S3](https://bucketav.com/) with additional integrations is available at [AWS Marketplace](https://aws.amazon.com/marketplace/pp/B07XFR781T).
 
 ## Features
 
 * Uses ClamAV to scan newly added files on S3 buckets
 * Updates ClamAV database every 3 hours automatically
-* Scales EC2 instance workers to distribute workload
+* Scales EC2 instance workers to distribute the workload
 * Publishes a message to SNS in case of a finding
-* Delete infected files if needed
+* Can optionally delete compromised files automatically
 * Logs to CloudWatch Logs
 
-## Additional Commercial Features
+### Additional Commercial Features by bucketAV
 
-* S3 -> SNS -> VirusScan for Amazon S3 support
-* Multi-Account support
+* Reporting capabilities
+* Dashboard
+* Scan buckets at regular intervals / initial bucket scan
 * Quarantine infected files
-* CloudWatch Integration (Metrics and Dashboard)
-* Security Hub Integration
-* SSM OpsCenter Integration
+* Enhanced security features (e.g., IMDSv2)
+* Regular Security updates
+* Multi-Account support
+* AWS Integrations:
+    * CloudWatch Integration (Metrics and Dashboard)
+    * Security Hub Integration
+    * SSM OpsCenter Integration
+* S3 -> SNS fan-out support
+* Support
 
-The [VirusScan for Amazon S3](https://s3-virusscan.widdix.net/) with additional integrations is available in the [AWS Marketplace](https://aws.amazon.com/marketplace/pp/B07XFR781T).
+[bucketAV - Antivirus for Amazon S3](https://bucketav.com/) with additional integrations is available at [AWS Marketplace](https://aws.amazon.com/marketplace/pp/B07XFR781T).
 
 ## How does it work
 
@@ -66,7 +73,7 @@ If you like to receive emails if a virus was found you must subscribe to the SNS
 
 You will receive a confirmation email.
 
-> The [VirusScan for Amazon S3](https://s3-virusscan.widdix.net/) with additional integrations is available in the [AWS Marketplace](https://aws.amazon.com/marketplace/pp/B07XFR781T).
+> [bucketAV - Antivirus for Amazon S3](https://bucketav.com/) with additional integrations is available at [AWS Marketplace](https://aws.amazon.com/marketplace/pp/B07XFR781T).
 
 ## Troubleshooting
 
