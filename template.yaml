@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 AWSTemplateFormatVersion: '2010-09-09'
-Description: 'Security: S3 VirusScan, a cloudonaut.io template'
+Description: 'Security: Antivirus for Amazon S3, a cloudonaut.io template'
 Metadata:
   'AWS::CloudFormation::Interface':
     ParameterGroups:
@@ -1037,7 +1037,7 @@ Resources:
   ScanSecurityGroup:
     Type: 'AWS::EC2::SecurityGroup'
     Properties:
-      GroupDescription: 'S3 VirusScan'
+      GroupDescription: 'Antivirus for Amazon S3'
       VpcId: {'Fn::ImportValue': !Sub '${ParentVPCStack}-VPC'}
   ScanSecurityGroupInSSHBastion:
     Type: 'AWS::EC2::SecurityGroupIngress'
