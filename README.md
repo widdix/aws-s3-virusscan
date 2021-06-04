@@ -2,7 +2,7 @@
 
 This template creates a malware scanner cluster for S3 buckets. Connect as many S3 buckets as you like.
 
-> [bucketAV - Antivirus for Amazon S3](https://bucketav.com/) with additional integrations is available at [AWS Marketplace](https://aws.amazon.com/marketplace/pp/B07XFR781T).
+> [bucketAV - Antivirus for Amazon S3](https://bucketav.com/) with additional features is available at [AWS Marketplace](https://aws.amazon.com/marketplace/pp/B07XFR781T).
 
 ## Features
 
@@ -29,7 +29,7 @@ This template creates a malware scanner cluster for S3 buckets. Connect as many 
 * S3 -> SNS fan-out support
 * Support
 
-[bucketAV - Antivirus for Amazon S3](https://bucketav.com/) with additional integrations is available at [AWS Marketplace](https://aws.amazon.com/marketplace/pp/B07XFR781T).
+[bucketAV - Antivirus for Amazon S3](https://bucketav.com/) with additional features is available at [AWS Marketplace](https://aws.amazon.com/marketplace/pp/B07XFR781T).
 
 ## How does it work
 
@@ -73,7 +73,7 @@ If you like to receive emails if a virus was found you must subscribe to the SNS
 
 You will receive a confirmation email.
 
-> [bucketAV - Antivirus for Amazon S3](https://bucketav.com/) with additional integrations is available at [AWS Marketplace](https://aws.amazon.com/marketplace/pp/B07XFR781T).
+> [bucketAV - Antivirus for Amazon S3](https://bucketav.com/) with additional features is available at [AWS Marketplace](https://aws.amazon.com/marketplace/pp/B07XFR781T).
 
 ## Troubleshooting
 
