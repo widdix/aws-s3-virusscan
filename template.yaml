@@ -701,7 +701,7 @@ Resources:
         extras1:
           commands:
             a_enable_epel:
-              command: 'amazon-linux-extras enable epel=7.11'
+              command: 'amazon-linux-extras enable epel=7.11 && yum -y clean metadata'
               test: "! grep -Fxq '[amzn2extra-epel]' /etc/yum.repos.d/amzn2-extras.repo"
         extras2:
           packages:
