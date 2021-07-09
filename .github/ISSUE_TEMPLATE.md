@@ -1,1 +1,1 @@
-AWS Marketplace customers have access to support via email: hello@widdix.net
+AWS Marketplace / bucketAV customers have access to support via email: hello@bucketav.com
