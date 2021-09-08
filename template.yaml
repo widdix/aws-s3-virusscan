@@ -706,14 +706,19 @@ Resources:
         extras2:
           packages:
             yum:
-              epel-release: []
+              'epel-release': []
+              ruby: []
+            rubygems: # workaround for https://github.com/aws/aws-sdk-ruby/pull/2573#issuecomment-913984611
+              'aws-eventstream': ['1.1.1']
+              'aws-partitions': ['1.493.0']
+              'aws-sigv4': ['1.2.4']
+              'aws-sdk-core': ['3.119.1']
         config:
           packages:
             yum:
               clamd: []
               clamav: []
-              clamav-update: []
-              ruby: []
+              'clamav-update': []
             rubygems:
               'aws-sdk-sqs': ['1.23.1']
               'aws-sdk-sns': ['1.20.0']
