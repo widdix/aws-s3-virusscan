@@ -1042,7 +1042,8 @@ Resources:
       - DeviceName: '/dev/xvda'
         Ebs:
           VolumeSize: !Ref VolumeSize
-          VolumeType: gp2
+          VolumeType: gp3
+          Encrypted: true
       IamInstanceProfile: !Ref ScanInstanceProfile
       ImageId: !FindInMap [RegionMap, !Ref 'AWS::Region', AMI]
       InstanceType: !Ref InstanceType
