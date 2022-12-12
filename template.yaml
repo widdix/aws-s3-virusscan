@@ -1037,7 +1037,6 @@ Resources:
                 - '/etc/cfn/cfn-hup.conf'
                 - '/etc/cfn/hooks.d/cfn-auto-reloader.conf'
     Properties:
-      LaunchTemplateName: ScanLaunchTemplate
       LaunchTemplateData:
         KeyName: !If [HasKeyName, !Ref KeyName, !Ref 'AWS::NoValue']
         NetworkInterfaces:
@@ -1055,13 +1054,12 @@ Resources:
         IamInstanceProfile:
           Name: !Ref ScanInstanceProfile
         ImageId: !FindInMap [RegionMap, !Ref 'AWS::Region', AMI]
-        InstanceMarketOptions:
-          !If
-          - HasSpotPrice
-          - MarketType: spot
-            SpotOptions:
-              MaxPrice: !Ref SpotPrice
-          - !Ref AWS::NoValue
+        InstanceMarketOptions: !If
+        - HasSpotPrice
+        - MarketType: spot
+          SpotOptions:
+            MaxPrice: !Ref SpotPrice
+        - !Ref AWS::NoValue
         InstanceType: !Ref InstanceType
         UserData:
           'Fn::Base64': !Sub |
