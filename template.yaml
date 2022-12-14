@@ -299,7 +299,9 @@ Resources:
   ScanAutoScalingGroup:
     Type: 'AWS::AutoScaling::AutoScalingGroup'
     Properties:
-      LaunchConfigurationName: !Ref ScanLaunchConfiguration
+      LaunchTemplate:
+        LaunchTemplateId: !Ref ScanLaunchTemplate
+        Version: !GetAtt ScanLaunchTemplate.LatestVersionNumber
       MaxSize: !Ref AutoScalingMaxSize
       MinSize: !Ref AutoScalingMinSize
       VPCZoneIdentifier: !Split [',', {'Fn::ImportValue': !Sub '${ParentVPCStack}-SubnetsPublic'}]
@@ -476,8 +478,8 @@ Resources:
     Type: 'AWS::Logs::LogGroup'
     Properties:
       RetentionInDays: !Ref LogsRetentionInDays
-  ScanLaunchConfiguration:
-    Type: 'AWS::AutoScaling::LaunchConfiguration'
+  ScanLaunchTemplate:
+    Type: 'AWS::EC2::LaunchTemplate'
     Metadata:
       'AWS::CloudFormation::Init':
         configSets:
@@ -967,8 +969,8 @@ Resources:
               content: !Sub |
                 [cfn-auto-reloader-hook]
                 triggers=post.update
-                path=Resources.ScanLaunchConfiguration.Metadata.AWS::CloudFormation::Init
-                action=/opt/aws/bin/cfn-init -v --stack ${AWS::StackName} --resource ScanLaunchConfiguration --region ${AWS::Region}
+                path=Resources.ScanLaunchTemplate.Metadata.AWS::CloudFormation::Init
+                action=/opt/aws/bin/cfn-init -v --stack ${AWS::StackName} --resource ScanLaunchTemplate --region ${AWS::Region}
                 runas=root
           commands:
             a_enable_freshclam_cron:
@@ -1035,27 +1037,36 @@ Resources:
                 - '/etc/cfn/cfn-hup.conf'
                 - '/etc/cfn/hooks.d/cfn-auto-reloader.conf'
     Properties:
-      KeyName: !If [HasKeyName, !Ref KeyName, !Ref 'AWS::NoValue']
-      AssociatePublicIpAddress: true
-      EbsOptimized: false
-      BlockDeviceMappings:
-      - DeviceName: '/dev/xvda'
-        Ebs:
-          VolumeSize: !Ref VolumeSize
-          VolumeType: gp3
-          Encrypted: true
-      IamInstanceProfile: !Ref ScanInstanceProfile
-      ImageId: !FindInMap [RegionMap, !Ref 'AWS::Region', AMI]
-      InstanceType: !Ref InstanceType
-      SpotPrice: !If [HasSpotPrice, !Ref SpotPrice, !Ref 'AWS::NoValue']
-      SecurityGroups:
-      - !Ref ScanSecurityGroup
-      UserData:
-        'Fn::Base64': !Sub |
-          #!/bin/bash -ex
-          trap '/opt/aws/bin/cfn-signal -e 1 --stack ${AWS::StackName} --resource ScanAutoScalingGroup --region ${AWS::Region}' ERR
-          /opt/aws/bin/cfn-init -v --stack ${AWS::StackName} --resource ScanLaunchConfiguration --region ${AWS::Region}
-          /opt/aws/bin/cfn-signal -e 0 --stack ${AWS::StackName} --resource ScanAutoScalingGroup --region ${AWS::Region}
+      LaunchTemplateData:
+        KeyName: !If [HasKeyName, !Ref KeyName, !Ref 'AWS::NoValue']
+        NetworkInterfaces:
+        - DeviceIndex: 0
+          AssociatePublicIpAddress: true
+          Groups:
+          - !Ref ScanSecurityGroup
+        EbsOptimized: false
+        BlockDeviceMappings:
+        - DeviceName: '/dev/xvda'
+          Ebs:
+            VolumeSize: !Ref VolumeSize
+            VolumeType: gp3
+            Encrypted: true
+        IamInstanceProfile:
+          Name: !Ref ScanInstanceProfile
+        ImageId: !FindInMap [RegionMap, !Ref 'AWS::Region', AMI]
+        InstanceMarketOptions: !If
+        - HasSpotPrice
+        - MarketType: spot
+          SpotOptions:
+            MaxPrice: !Ref SpotPrice
+        - !Ref AWS::NoValue
+        InstanceType: !Ref InstanceType
+        UserData:
+          'Fn::Base64': !Sub |
+            #!/bin/bash -ex
+            trap '/opt/aws/bin/cfn-signal -e 1 --stack ${AWS::StackName} --resource ScanAutoScalingGroup --region ${AWS::Region}' ERR
+            /opt/aws/bin/cfn-init -v --stack ${AWS::StackName} --resource ScanLaunchTemplate --region ${AWS::Region}
+            /opt/aws/bin/cfn-signal -e 0 --stack ${AWS::StackName} --resource ScanAutoScalingGroup --region ${AWS::Region}
   ScanSecurityGroup:
     Type: 'AWS::EC2::SecurityGroup'
     Properties:
